@@ -1,0 +1,458 @@
+-- MGCollections schema
+-- Designed for future expansion beyond books (collection_type stays implicit on `books` for now)
+-- and for a future Three.js 3D room reusing book_positions x/y/z + rotation data.
+
+create extension if not exists "pgcrypto";
+
+-- =========================================
+-- profiles
+-- =========================================
+create table if not exists profiles (
+  id uuid primary key references auth.users (id) on delete cascade,
+  username text unique not null,
+  display_name text,
+  bio text,
+  avatar_url text,
+  is_public boolean not null default true,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists idx_profiles_username on profiles (username);
+
+-- =========================================
+-- books (shared catalog, not user-owned)
+-- =========================================
+create table if not exists books (
+  id uuid primary key default gen_random_uuid(),
+  external_source text,
+  external_id text,
+  title text not null,
+  authors text[] not null default '{}',
+  isbn_10 text,
+  isbn_13 text,
+  publisher text,
+  published_date text,
+  description text,
+  page_count integer,
+  cover_url text,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists idx_books_isbn_13 on books (isbn_13);
+create index if not exists idx_books_isbn_10 on books (isbn_10);
+create unique index if not exists idx_books_external on books (external_source, external_id);
+
+-- =========================================
+-- user_books (a user's copy of a book)
+-- =========================================
+create table if not exists user_books (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references profiles (id) on delete cascade,
+  book_id uuid not null references books (id) on delete cascade,
+  status text not null default 'owned_unread'
+    check (status in ('owned_unread', 'reading', 'finished', 'wishlist', 'borrowed', 'lent_out', 'dnf')),
+  condition text,
+  notes text,
+  is_lendable boolean not null default true,
+  date_added timestamptz not null default now(),
+  created_at timestamptz not null default now()
+);
+
+create index if not exists idx_user_books_user_id on user_books (user_id);
+create index if not exists idx_user_books_book_id on user_books (book_id);
+create index if not exists idx_user_books_status on user_books (status);
+
+-- =========================================
+-- bookshelves
+-- =========================================
+create table if not exists bookshelves (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references profiles (id) on delete cascade,
+  name text not null,
+  description text,
+  width_cm integer not null default 90,
+  height_cm integer not null default 180,
+  theme text not null default 'walnut',
+  sort_order integer not null default 0,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists idx_bookshelves_user_id on bookshelves (user_id);
+
+-- =========================================
+-- shelf_rows
+-- =========================================
+create table if not exists shelf_rows (
+  id uuid primary key default gen_random_uuid(),
+  bookshelf_id uuid not null references bookshelves (id) on delete cascade,
+  name text,
+  row_index integer not null default 0,
+  height_cm integer not null default 30,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists idx_shelf_rows_bookshelf_id on shelf_rows (bookshelf_id);
+
+-- =========================================
+-- book_positions
+-- Includes x/y/z + rotation so a future Three.js 3D room can reuse this data directly.
+-- =========================================
+create table if not exists book_positions (
+  id uuid primary key default gen_random_uuid(),
+  user_book_id uuid not null references user_books (id) on delete cascade,
+  bookshelf_id uuid not null references bookshelves (id) on delete cascade,
+  shelf_row_id uuid not null references shelf_rows (id) on delete cascade,
+  position_index integer not null default 0,
+  position_x numeric not null default 0,
+  position_y numeric not null default 0,
+  position_z numeric not null default 0,
+  rotation_y numeric not null default 0,
+  display_width numeric,
+  display_height numeric,
+  display_depth numeric,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (user_book_id)
+);
+
+create index if not exists idx_book_positions_shelf_row_id on book_positions (shelf_row_id);
+create index if not exists idx_book_positions_bookshelf_id on book_positions (bookshelf_id);
+
+-- =========================================
+-- borrow_requests
+-- =========================================
+create table if not exists borrow_requests (
+  id uuid primary key default gen_random_uuid(),
+  owner_id uuid not null references profiles (id) on delete cascade,
+  requester_name text not null,
+  requester_email text not null,
+  user_book_id uuid not null references user_books (id) on delete cascade,
+  message text,
+  status text not null default 'pending'
+    check (status in ('pending', 'approved', 'declined')),
+  created_at timestamptz not null default now()
+);
+
+create index if not exists idx_borrow_requests_owner_id on borrow_requests (owner_id);
+create index if not exists idx_borrow_requests_user_book_id on borrow_requests (user_book_id);
+
+-- =========================================
+-- loans
+-- =========================================
+create table if not exists loans (
+  id uuid primary key default gen_random_uuid(),
+  user_book_id uuid not null references user_books (id) on delete cascade,
+  owner_id uuid not null references profiles (id) on delete cascade,
+  borrower_name text not null,
+  borrower_email text,
+  borrow_date date not null default current_date,
+  due_date date,
+  return_date date,
+  status text not null default 'active'
+    check (status in ('active', 'returned', 'overdue')),
+  notes text,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists idx_loans_owner_id on loans (owner_id);
+create index if not exists idx_loans_user_book_id on loans (user_book_id);
+
+-- =========================================
+-- notifications
+-- =========================================
+create table if not exists notifications (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references profiles (id) on delete cascade,
+  type text not null,
+  title text not null,
+  message text,
+  is_read boolean not null default false,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists idx_notifications_user_id on notifications (user_id);
+
+-- =========================================
+-- updated_at trigger for book_positions
+-- =========================================
+create or replace function set_updated_at()
+returns trigger as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$ language plpgsql;
+
+drop trigger if exists trg_book_positions_updated_at on book_positions;
+create trigger trg_book_positions_updated_at
+  before update on book_positions
+  for each row execute function set_updated_at();
+
+-- =========================================
+-- auto-create profile on signup
+-- =========================================
+create or replace function handle_new_user()
+returns trigger as $$
+begin
+  insert into public.profiles (id, username, display_name)
+  values (
+    new.id,
+    coalesce(new.raw_user_meta_data ->> 'username', split_part(new.email, '@', 1) || '_' || substr(new.id::text, 1, 6)),
+    coalesce(new.raw_user_meta_data ->> 'display_name', split_part(new.email, '@', 1))
+  );
+  return new;
+end;
+$$ language plpgsql security definer set search_path = public;
+
+drop trigger if exists trg_on_auth_user_created on auth.users;
+create trigger trg_on_auth_user_created
+  after insert on auth.users
+  for each row execute function handle_new_user();
+
+-- =========================================
+-- notify owner on new borrow request (bypasses RLS via security definer,
+-- so we don't need to expose an open insert policy on notifications)
+-- =========================================
+create or replace function notify_owner_on_borrow_request()
+returns trigger as $$
+begin
+  insert into public.notifications (user_id, type, title, message)
+  values (
+    new.owner_id,
+    'borrow_request',
+    'New borrow request',
+    new.requester_name || ' requested to borrow one of your books.'
+  );
+  return new;
+end;
+$$ language plpgsql security definer set search_path = public;
+
+drop trigger if exists trg_on_borrow_request_created on borrow_requests;
+create trigger trg_on_borrow_request_created
+  after insert on borrow_requests
+  for each row execute function notify_owner_on_borrow_request();
+
+-- =========================================
+-- Row Level Security
+-- =========================================
+alter table profiles enable row level security;
+alter table books enable row level security;
+alter table user_books enable row level security;
+alter table bookshelves enable row level security;
+alter table shelf_rows enable row level security;
+alter table book_positions enable row level security;
+alter table borrow_requests enable row level security;
+alter table loans enable row level security;
+alter table notifications enable row level security;
+
+-- ---------- profiles ----------
+create policy "Public profiles are viewable by everyone"
+  on profiles for select
+  using (is_public = true or auth.uid() = id);
+
+create policy "Users can insert their own profile"
+  on profiles for insert
+  with check (auth.uid() = id);
+
+create policy "Users can update their own profile"
+  on profiles for update
+  using (auth.uid() = id);
+
+-- ---------- books (shared catalog) ----------
+create policy "Books are viewable by everyone"
+  on books for select
+  using (true);
+
+create policy "Authenticated users can add books to the catalog"
+  on books for insert
+  to authenticated
+  with check (true);
+
+-- ---------- user_books ----------
+create policy "Users can view their own user_books"
+  on user_books for select
+  using (auth.uid() = user_id);
+
+create policy "Public can view lendable/public user_books via owner's public profile"
+  on user_books for select
+  using (
+    exists (
+      select 1 from profiles p
+      where p.id = user_books.user_id and p.is_public = true
+    )
+  );
+
+create policy "Users can insert their own user_books"
+  on user_books for insert
+  with check (auth.uid() = user_id);
+
+create policy "Users can update their own user_books"
+  on user_books for update
+  using (auth.uid() = user_id);
+
+create policy "Users can delete their own user_books"
+  on user_books for delete
+  using (auth.uid() = user_id);
+
+-- ---------- bookshelves ----------
+create policy "Users can view their own bookshelves"
+  on bookshelves for select
+  using (auth.uid() = user_id);
+
+create policy "Public can view bookshelves of public profiles"
+  on bookshelves for select
+  using (
+    exists (
+      select 1 from profiles p
+      where p.id = bookshelves.user_id and p.is_public = true
+    )
+  );
+
+create policy "Users can insert their own bookshelves"
+  on bookshelves for insert
+  with check (auth.uid() = user_id);
+
+create policy "Users can update their own bookshelves"
+  on bookshelves for update
+  using (auth.uid() = user_id);
+
+create policy "Users can delete their own bookshelves"
+  on bookshelves for delete
+  using (auth.uid() = user_id);
+
+-- ---------- shelf_rows ----------
+create policy "Users can view their own shelf_rows"
+  on shelf_rows for select
+  using (
+    exists (
+      select 1 from bookshelves b
+      where b.id = shelf_rows.bookshelf_id and b.user_id = auth.uid()
+    )
+  );
+
+create policy "Public can view shelf_rows of public profiles"
+  on shelf_rows for select
+  using (
+    exists (
+      select 1 from bookshelves b
+      join profiles p on p.id = b.user_id
+      where b.id = shelf_rows.bookshelf_id and p.is_public = true
+    )
+  );
+
+create policy "Users can manage shelf_rows on their own bookshelves"
+  on shelf_rows for insert
+  with check (
+    exists (
+      select 1 from bookshelves b
+      where b.id = shelf_rows.bookshelf_id and b.user_id = auth.uid()
+    )
+  );
+
+create policy "Users can update shelf_rows on their own bookshelves"
+  on shelf_rows for update
+  using (
+    exists (
+      select 1 from bookshelves b
+      where b.id = shelf_rows.bookshelf_id and b.user_id = auth.uid()
+    )
+  );
+
+create policy "Users can delete shelf_rows on their own bookshelves"
+  on shelf_rows for delete
+  using (
+    exists (
+      select 1 from bookshelves b
+      where b.id = shelf_rows.bookshelf_id and b.user_id = auth.uid()
+    )
+  );
+
+-- ---------- book_positions ----------
+create policy "Users can view their own book_positions"
+  on book_positions for select
+  using (
+    exists (
+      select 1 from user_books ub
+      where ub.id = book_positions.user_book_id and ub.user_id = auth.uid()
+    )
+  );
+
+create policy "Public can view book_positions of public profiles"
+  on book_positions for select
+  using (
+    exists (
+      select 1 from user_books ub
+      join profiles p on p.id = ub.user_id
+      where ub.id = book_positions.user_book_id and p.is_public = true
+    )
+  );
+
+create policy "Users can manage their own book_positions"
+  on book_positions for insert
+  with check (
+    exists (
+      select 1 from user_books ub
+      where ub.id = book_positions.user_book_id and ub.user_id = auth.uid()
+    )
+  );
+
+create policy "Users can update their own book_positions"
+  on book_positions for update
+  using (
+    exists (
+      select 1 from user_books ub
+      where ub.id = book_positions.user_book_id and ub.user_id = auth.uid()
+    )
+  );
+
+create policy "Users can delete their own book_positions"
+  on book_positions for delete
+  using (
+    exists (
+      select 1 from user_books ub
+      where ub.id = book_positions.user_book_id and ub.user_id = auth.uid()
+    )
+  );
+
+-- ---------- borrow_requests ----------
+create policy "Owners can view borrow requests addressed to them"
+  on borrow_requests for select
+  using (auth.uid() = owner_id);
+
+create policy "Anyone can create a borrow request"
+  on borrow_requests for insert
+  with check (true);
+
+create policy "Owners can update borrow requests addressed to them"
+  on borrow_requests for update
+  using (auth.uid() = owner_id);
+
+-- ---------- loans ----------
+create policy "Owners can view their own loans"
+  on loans for select
+  using (auth.uid() = owner_id);
+
+create policy "Owners can insert their own loans"
+  on loans for insert
+  with check (auth.uid() = owner_id);
+
+create policy "Owners can update their own loans"
+  on loans for update
+  using (auth.uid() = owner_id);
+
+create policy "Owners can delete their own loans"
+  on loans for delete
+  using (auth.uid() = owner_id);
+
+-- ---------- notifications ----------
+create policy "Users can view their own notifications"
+  on notifications for select
+  using (auth.uid() = user_id);
+
+create policy "Users can update their own notifications"
+  on notifications for update
+  using (auth.uid() = user_id);
+
+create policy "Users can delete their own notifications"
+  on notifications for delete
+  using (auth.uid() = user_id);

@@ -1,0 +1,110 @@
+"use client";
+
+import Image from "next/image";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { Button } from "@/components/ui/button";
+import { BookStatusBadge } from "@/components/books/BookStatusBadge";
+import { READING_STATUS_LABELS, type ReadingStatus, type UserBook } from "@/types/book";
+import { READING_STATUSES } from "@/lib/constants";
+
+export function BookDetailsPanel({
+  userBook,
+  open,
+  onOpenChange,
+  onStatusChange,
+  onLendableChange,
+  onRemove,
+  readOnly = false,
+}: {
+  userBook: UserBook | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onStatusChange?: (status: ReadingStatus) => void;
+  onLendableChange?: (isLendable: boolean) => void;
+  onRemove?: () => void;
+  readOnly?: boolean;
+}) {
+  if (!userBook) return null;
+  const book = userBook.book;
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle>{book?.title ?? "Untitled"}</DialogTitle>
+        </DialogHeader>
+
+        <div className="flex gap-4">
+          <div className="relative h-44 w-28 flex-shrink-0 overflow-hidden rounded bg-zinc-800">
+            {book?.cover_url ? (
+              <Image src={book.cover_url} alt={book.title} fill className="object-cover" unoptimized />
+            ) : (
+              <div className="flex h-full items-center justify-center text-xs text-zinc-500">No cover</div>
+            )}
+          </div>
+          <div className="flex-1 space-y-2">
+            <p className="text-sm text-zinc-400">{book?.authors?.join(", ") || "Unknown author"}</p>
+            <BookStatusBadge status={userBook.status} />
+            <p className="text-xs text-zinc-500">
+              {book?.publisher ?? "—"} {book?.published_date ? `· ${book.published_date}` : ""}
+            </p>
+            {book?.page_count && <p className="text-xs text-zinc-500">{book.page_count} pages</p>}
+          </div>
+        </div>
+
+        {book?.description && (
+          <p className="max-h-32 overflow-y-auto text-sm text-zinc-400">{book.description}</p>
+        )}
+
+        {!readOnly && (
+          <div className="space-y-4 border-t border-zinc-800 pt-4">
+            <div className="space-y-2">
+              <Label>Status</Label>
+              <Select value={userBook.status} onValueChange={(v) => onStatusChange?.(v as ReadingStatus)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {READING_STATUSES.map((s) => (
+                    <SelectItem key={s} value={s}>
+                      {READING_STATUS_LABELS[s]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <Label htmlFor="lendable">Lendable to visitors</Label>
+              <Switch
+                id="lendable"
+                checked={userBook.is_lendable}
+                onCheckedChange={(checked) => onLendableChange?.(checked)}
+              />
+            </div>
+
+            {onRemove && (
+              <Button variant="destructive" className="w-full" onClick={onRemove}>
+                Remove from collection
+              </Button>
+            )}
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}

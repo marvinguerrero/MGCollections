@@ -1,0 +1,132 @@
+"use client";
+
+import { useState } from "react";
+import Image from "next/image";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { BookStatusBadge } from "@/components/books/BookStatusBadge";
+import { BookshelfView } from "@/components/shelves/BookshelfView";
+import { toast } from "sonner";
+import type { BookshelfWithRows } from "@/types/shelf";
+import type { UserBook } from "@/types/book";
+
+export function PublicLibraryClient({
+  ownerId,
+  bookshelves,
+}: {
+  ownerId: string;
+  bookshelves: BookshelfWithRows[];
+}) {
+  const [selected, setSelected] = useState<UserBook | null>(null);
+  const [requesting, setRequesting] = useState(false);
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [message, setMessage] = useState("");
+  const [submitted, setSubmitted] = useState(false);
+
+  async function handleSubmitRequest() {
+    if (!selected || !name.trim() || !email.trim()) return;
+    setRequesting(true);
+
+    try {
+      const res = await fetch("/api/borrow-request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userBookId: selected.id,
+          ownerId,
+          requesterName: name,
+          requesterEmail: email,
+          message,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error ?? "Failed to send request");
+
+      setSubmitted(true);
+      toast.success("Borrow request sent!");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to send request");
+    } finally {
+      setRequesting(false);
+    }
+  }
+
+  function closeDialog() {
+    setSelected(null);
+    setSubmitted(false);
+    setName("");
+    setEmail("");
+    setMessage("");
+  }
+
+  return (
+    <>
+      <div className="mx-auto max-w-5xl space-y-10 px-6 py-10">
+        {bookshelves.length === 0 ? (
+          <p className="text-center text-sm text-zinc-500">This library doesn&apos;t have any public shelves yet.</p>
+        ) : (
+          bookshelves.map((shelf) => (
+            <BookshelfView key={shelf.id} bookshelf={shelf} readOnly onBookClick={setSelected} />
+          ))
+        )}
+      </div>
+
+      <Dialog open={!!selected} onOpenChange={(open) => !open && closeDialog()}>
+        <DialogContent className="max-w-lg">
+          {selected && (
+            <>
+              <DialogHeader>
+                <DialogTitle>{selected.book?.title}</DialogTitle>
+              </DialogHeader>
+              <div className="flex gap-4">
+                <div className="relative h-40 w-28 flex-shrink-0 overflow-hidden rounded bg-zinc-800">
+                  {selected.book?.cover_url && (
+                    <Image src={selected.book.cover_url} alt={selected.book.title} fill className="object-cover" unoptimized />
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <p className="text-sm text-zinc-400">{selected.book?.authors?.join(", ")}</p>
+                  <BookStatusBadge status={selected.status} />
+                </div>
+              </div>
+
+              {submitted ? (
+                <p className="text-sm text-zinc-300">Your request has been sent to the owner.</p>
+              ) : selected.is_lendable && selected.status !== "lent_out" ? (
+                <div className="space-y-3 border-t border-zinc-800 pt-4">
+                  <h3 className="text-sm font-medium text-zinc-200">Request to borrow</h3>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="req-name">Your name</Label>
+                    <Input id="req-name" value={name} onChange={(e) => setName(e.target.value)} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="req-email">Your email</Label>
+                    <Input id="req-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="req-message">Message (optional)</Label>
+                    <Textarea id="req-message" value={message} onChange={(e) => setMessage(e.target.value)} />
+                  </div>
+                  <Button className="w-full" onClick={handleSubmitRequest} disabled={requesting}>
+                    {requesting ? "Sending..." : "Send request"}
+                  </Button>
+                </div>
+              ) : (
+                <p className="text-sm text-zinc-500">This book isn&apos;t currently available to borrow.</p>
+              )}
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}

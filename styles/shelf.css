@@ -1,0 +1,34 @@
+.shelf-row-board {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.06) 0%, rgba(0, 0, 0, 0.25) 100%);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 4px solid rgba(0, 0, 0, 0.45);
+  box-shadow: 0 8px 14px -8px rgba(0, 0, 0, 0.6) inset;
+}
+
+.shelf-frame {
+  background-image: repeating-linear-gradient(
+    90deg,
+    rgba(0, 0, 0, 0.08) 0px,
+    rgba(0, 0, 0, 0) 2px,
+    rgba(0, 0, 0, 0) 18px,
+    rgba(0, 0, 0, 0.08) 20px
+  );
+}
+
+.book-spine {
+  transition: transform 120ms ease, box-shadow 120ms ease;
+  box-shadow: inset -3px 0 6px rgba(0, 0, 0, 0.35), inset 3px 0 4px rgba(255, 255, 255, 0.08);
+}
+
+.book-spine:hover {
+  transform: translateY(-6px);
+}
+
+.book-spine-dragging {
+  opacity: 0.4;
+}
+
+.book-spine-title {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+}

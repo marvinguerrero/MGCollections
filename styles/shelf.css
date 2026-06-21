@@ -28,12 +28,23 @@
   opacity: 0.4;
 }
 
-.book-spine-title {
+/*
+ * Real book spines read bottom-to-top with letter heads facing left (tilt
+ * your head left to read it normally) — vertical-rl alone reads top-to-bottom
+ * facing right, so it needs the 180deg flip on top.
+ */
+.book-spine-text {
   writing-mode: vertical-rl;
   text-orientation: mixed;
-  max-height: 9rem;
-  max-width: 100%;
-  overflow: hidden;
+  transform: rotate(180deg);
   white-space: nowrap;
-  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.book-spine-title {
+  line-height: 1.05;
+}
+
+.book-spine-author {
+  line-height: 1.1;
 }

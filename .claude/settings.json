@@ -6,7 +6,9 @@
       "Bash(node interaction-check.mjs)",
       "Bash(node spine-check.mjs)",
       "Bash(node zoom-check.mjs)",
-      "Bash(node full-title-check.mjs)"
+      "Bash(node full-title-check.mjs)",
+      "Bash(node test.mjs)",
+      "Bash(node check.mjs)"
     ]
   }
 }

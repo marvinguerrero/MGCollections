@@ -1,16 +1,29 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 import {
   getSpineColorFromCover,
-  getSpineWidthClass,
   getSpineWidthPx,
-  getSpineDisplayTitle,
   fallbackSpineColor,
+  SPINE_HEIGHT_PX,
 } from "@/lib/spineUtils";
 import type { UserBook } from "@/types/book";
+
+const SPINE_PADDING_Y_PX = 20;
+const TITLE_AUTHOR_GAP_PX = 8;
+
+const MAX_TITLE_FONT_PX = 15;
+const MIN_TITLE_FONT_PX = 7;
+const MAX_AUTHOR_FONT_PX = 10;
+const MIN_AUTHOR_FONT_PX = 6.5;
+
+function letterSpacingFor(fontPx: number): string {
+  if (fontPx <= 8) return "-0.02em";
+  if (fontPx <= 10) return "-0.01em";
+  return "normal";
+}
 
 export function BookSpine({
   userBook,
@@ -24,10 +37,17 @@ export function BookSpine({
   onClick?: () => void;
 }) {
   const book = userBook.book;
-  const seed = `${book?.title ?? ""}${book?.authors?.[0] ?? ""}`;
+  const author = book?.authors?.[0] ?? null;
+  const seed = `${book?.title ?? ""}${author ?? ""}`;
   const [color, setColor] = useState(() => fallbackSpineColor(seed));
 
-  useEffect(() => {
+  const titleRef = useRef<HTMLSpanElement>(null);
+  const authorRef = useRef<HTMLSpanElement>(null);
+  const [titleFontPx, setTitleFontPx] = useState(MAX_TITLE_FONT_PX);
+  const [authorFontPx, setAuthorFontPx] = useState(MAX_AUTHOR_FONT_PX);
+  const [showAuthor, setShowAuthor] = useState(true);
+
+  useLayoutEffect(() => {
     let cancelled = false;
     getSpineColorFromCover(book?.cover_url, seed).then((c) => {
       if (!cancelled) setColor(c);
@@ -39,8 +59,45 @@ export function BookSpine({
   }, [book?.cover_url]);
 
   const widthPx = getSpineWidthPx(book?.page_count);
-  const widthClass = getSpineWidthClass(book?.page_count);
-  const displayTitle = getSpineDisplayTitle(book?.title, widthClass);
+
+  // Auto-fit the full title (never abbreviated) within the spine's available
+  // height by shrinking font-size until it fits; the author line only gets
+  // to exist in whatever vertical space is left over, and disappears first
+  // if there isn't any — title always wins.
+  useLayoutEffect(() => {
+    if (view !== "spine") return;
+    const titleEl = titleRef.current;
+    if (!titleEl) return;
+
+    const availableHeight = SPINE_HEIGHT_PX - SPINE_PADDING_Y_PX;
+
+    let size = MAX_TITLE_FONT_PX;
+    titleEl.style.fontSize = `${size}px`;
+    titleEl.style.letterSpacing = letterSpacingFor(size);
+    while (size > MIN_TITLE_FONT_PX && titleEl.scrollHeight > availableHeight) {
+      size -= 0.5;
+      titleEl.style.fontSize = `${size}px`;
+      titleEl.style.letterSpacing = letterSpacingFor(size);
+    }
+    setTitleFontPx(size);
+
+    const remainingForAuthor = availableHeight - titleEl.scrollHeight - (author ? TITLE_AUTHOR_GAP_PX : 0);
+
+    const authorEl = authorRef.current;
+    if (author && authorEl && remainingForAuthor >= MIN_AUTHOR_FONT_PX * 2) {
+      let authorSize = MAX_AUTHOR_FONT_PX;
+      authorEl.style.fontSize = `${authorSize}px`;
+      while (authorSize > MIN_AUTHOR_FONT_PX && authorEl.scrollHeight > remainingForAuthor) {
+        authorSize -= 0.5;
+        authorEl.style.fontSize = `${authorSize}px`;
+      }
+      const fitsAuthor = authorEl.scrollHeight <= remainingForAuthor;
+      setAuthorFontPx(authorSize);
+      setShowAuthor(fitsAuthor);
+    } else {
+      setShowAuthor(false);
+    }
+  }, [book?.title, author, view]);
 
   if (view === "cover") {
     return (
@@ -48,7 +105,7 @@ export function BookSpine({
         type="button"
         onClick={onClick}
         className={cn(
-          "relative h-44 w-28 flex-shrink-0 overflow-hidden rounded shadow-lg transition-transform hover:-translate-y-1",
+          "relative h-56 w-28 flex-shrink-0 overflow-hidden rounded shadow-lg transition-transform hover:-translate-y-1",
           isDragging && "book-spine-dragging"
         )}
         title={book?.title}
@@ -72,18 +129,32 @@ export function BookSpine({
       type="button"
       onClick={onClick}
       className={cn(
-        "book-spine relative flex h-44 max-sm:min-w-11 flex-shrink-0 flex-col items-center justify-center rounded-[2px] py-2",
+        "book-spine relative flex h-56 max-sm:min-w-11 flex-shrink-0 flex-col items-center justify-center gap-2 rounded-[2px] py-2.5",
         isDragging && "book-spine-dragging"
       )}
       style={{ width: widthPx, backgroundColor: color }}
       title={book?.title}
     >
-      {/* Vertical writing-mode on every breakpoint, like text printed along a real spine.
-          CSS (book-spine-title) clamps height + ellipsizes so it never escapes the spine;
-          thin spines get initials instead since there's no room to spell anything out. */}
-      <span className="book-spine-title text-[11px] font-medium leading-tight text-white/90">
-        {displayTitle}
+      <span
+        ref={titleRef}
+        className="book-spine-text book-spine-title font-semibold text-white/95"
+        style={{ fontSize: titleFontPx }}
+      >
+        {book?.title}
       </span>
+      {author && (
+        <span
+          ref={authorRef}
+          className={cn(
+            "book-spine-text book-spine-author font-normal text-white/70",
+            !showAuthor && "invisible absolute"
+          )}
+          style={{ fontSize: authorFontPx }}
+          aria-hidden={showAuthor ? undefined : "true"}
+        >
+          {author}
+        </span>
+      )}
     </button>
   );
 }

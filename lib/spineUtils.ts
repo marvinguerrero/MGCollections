@@ -24,23 +24,8 @@ export function getSpineWidthPx(pageCount: number | null | undefined): number {
   return SPINE_WIDTH_PX[getSpineWidthClass(pageCount)];
 }
 
-/**
- * "Thin" spines (<=200 pages, 28px wide) struggle to fit even an abbreviated
- * vertical title legibly, so fall back to initials. Wider spines show the
- * full title; CSS handles truncation (ellipsis) if it's still too tall.
- */
-export function getSpineDisplayTitle(title: string | null | undefined, widthClass: SpineWidthClass): string {
-  if (!title) return "";
-  if (widthClass !== "thin") return title;
-
-  const words = title.split(/\s+/).filter(Boolean);
-  if (words.length <= 1) return title.length > 8 ? `${title.slice(0, 8)}…` : title;
-  return words
-    .map((w) => w[0])
-    .join("")
-    .slice(0, 6)
-    .toUpperCase();
-}
+/** Physical height of a spine button (matches the `h-56` Tailwind class on BookSpine). */
+export const SPINE_HEIGHT_PX = 224;
 
 /** Deterministic fallback color derived from a string (title+author), used when no cover image is available. */
 export function fallbackSpineColor(seed: string): string {

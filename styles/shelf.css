@@ -38,7 +38,6 @@
   text-orientation: mixed;
   transform: rotate(180deg);
   white-space: nowrap;
-  max-width: 100%;
 }
 
 .book-spine-title {
@@ -47,4 +46,12 @@
 
 .book-spine-author {
   line-height: 1.1;
+}
+
+/* Very long titles wrap into parallel columns (like a real multi-line spine)
+   instead of being abbreviated or clipped; JS sets explicit height/width. */
+.book-spine-title-wrapped {
+  line-height: 1.15;
+  letter-spacing: 0;
+  text-align: center;
 }

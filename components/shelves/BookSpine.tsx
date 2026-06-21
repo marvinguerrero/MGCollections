@@ -12,10 +12,12 @@ import {
 import type { UserBook } from "@/types/book";
 
 const SPINE_PADDING_Y_PX = 20;
+const SPINE_PADDING_X_PX = 6;
 const TITLE_AUTHOR_GAP_PX = 8;
 
 const MAX_TITLE_FONT_PX = 15;
 const MIN_TITLE_FONT_PX = 7;
+const MIN_TITLE_FONT_PX_WRAPPED = 6;
 const MAX_AUTHOR_FONT_PX = 10;
 const MIN_AUTHOR_FONT_PX = 6.5;
 
@@ -40,12 +42,15 @@ export function BookSpine({
   const author = book?.authors?.[0] ?? null;
   const seed = `${book?.title ?? ""}${author ?? ""}`;
   const [color, setColor] = useState(() => fallbackSpineColor(seed));
+  const baseWidthPx = getSpineWidthPx(book?.page_count);
 
   const titleRef = useRef<HTMLSpanElement>(null);
   const authorRef = useRef<HTMLSpanElement>(null);
   const [titleFontPx, setTitleFontPx] = useState(MAX_TITLE_FONT_PX);
   const [authorFontPx, setAuthorFontPx] = useState(MAX_AUTHOR_FONT_PX);
   const [showAuthor, setShowAuthor] = useState(true);
+  const [spineWidthPx, setSpineWidthPx] = useState(baseWidthPx);
+  const [titleWrapped, setTitleWrapped] = useState(false);
 
   useLayoutEffect(() => {
     let cancelled = false;
@@ -58,18 +63,24 @@ export function BookSpine({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [book?.cover_url]);
 
-  const widthPx = getSpineWidthPx(book?.page_count);
-
   // Auto-fit the full title (never abbreviated) within the spine's available
-  // height by shrinking font-size until it fits; the author line only gets
-  // to exist in whatever vertical space is left over, and disappears first
-  // if there isn't any — title always wins.
+  // height. Phase 1 tries a single vertical column, shrinking font-size.
+  // If even the smallest readable font still doesn't fit in one column
+  // (very long titles), phase 2 lets it wrap into additional parallel
+  // columns — like a real thick spine with a two- or three-line title —
+  // widening the spine itself if the page-count width can't hold them.
+  // The author line only gets whatever vertical space is left over in a
+  // single-column title, and disappears first if there isn't any.
   useLayoutEffect(() => {
     if (view !== "spine") return;
     const titleEl = titleRef.current;
     if (!titleEl) return;
 
     const availableHeight = SPINE_HEIGHT_PX - SPINE_PADDING_Y_PX;
+    const availableWidth = baseWidthPx - SPINE_PADDING_X_PX;
+
+    titleEl.style.whiteSpace = "nowrap";
+    titleEl.style.height = "auto";
 
     let size = MAX_TITLE_FONT_PX;
     titleEl.style.fontSize = `${size}px`;
@@ -79,25 +90,52 @@ export function BookSpine({
       titleEl.style.fontSize = `${size}px`;
       titleEl.style.letterSpacing = letterSpacingFor(size);
     }
-    setTitleFontPx(size);
 
-    const remainingForAuthor = availableHeight - titleEl.scrollHeight - (author ? TITLE_AUTHOR_GAP_PX : 0);
+    if (titleEl.scrollHeight <= availableHeight) {
+      // Fits in one column — keep the simple, fully-legible single-line spine.
+      setTitleFontPx(size);
+      setTitleWrapped(false);
+      setSpineWidthPx(baseWidthPx);
 
-    const authorEl = authorRef.current;
-    if (author && authorEl && remainingForAuthor >= MIN_AUTHOR_FONT_PX * 2) {
-      let authorSize = MAX_AUTHOR_FONT_PX;
-      authorEl.style.fontSize = `${authorSize}px`;
-      while (authorSize > MIN_AUTHOR_FONT_PX && authorEl.scrollHeight > remainingForAuthor) {
-        authorSize -= 0.5;
+      const remainingForAuthor = availableHeight - titleEl.scrollHeight - (author ? TITLE_AUTHOR_GAP_PX : 0);
+      const authorEl = authorRef.current;
+      if (author && authorEl && remainingForAuthor >= MIN_AUTHOR_FONT_PX * 2) {
+        let authorSize = MAX_AUTHOR_FONT_PX;
         authorEl.style.fontSize = `${authorSize}px`;
+        while (authorSize > MIN_AUTHOR_FONT_PX && authorEl.scrollHeight > remainingForAuthor) {
+          authorSize -= 0.5;
+          authorEl.style.fontSize = `${authorSize}px`;
+        }
+        setAuthorFontPx(authorSize);
+        setShowAuthor(authorEl.scrollHeight <= remainingForAuthor);
+      } else {
+        setShowAuthor(false);
       }
-      const fitsAuthor = authorEl.scrollHeight <= remainingForAuthor;
-      setAuthorFontPx(authorSize);
-      setShowAuthor(fitsAuthor);
-    } else {
-      setShowAuthor(false);
+      return;
     }
-  }, [book?.title, author, view]);
+
+    // Phase 2: too long for one column even at the floor font — wrap into
+    // multiple parallel columns instead of clipping or abbreviating.
+    setShowAuthor(false);
+    titleEl.style.whiteSpace = "normal";
+    titleEl.style.overflowWrap = "break-word";
+    titleEl.style.height = `${availableHeight}px`;
+
+    let wrapSize = MIN_TITLE_FONT_PX;
+    titleEl.style.fontSize = `${wrapSize}px`;
+    titleEl.style.letterSpacing = letterSpacingFor(wrapSize);
+    while (wrapSize > MIN_TITLE_FONT_PX_WRAPPED && titleEl.scrollWidth > availableWidth) {
+      wrapSize -= 0.5;
+      titleEl.style.fontSize = `${wrapSize}px`;
+      titleEl.style.letterSpacing = letterSpacingFor(wrapSize);
+    }
+
+    setTitleFontPx(wrapSize);
+    setTitleWrapped(true);
+    // If it still needs more room than the page-count width allows, grow the
+    // spine itself rather than lose any of the title.
+    setSpineWidthPx(Math.max(baseWidthPx, titleEl.scrollWidth + SPINE_PADDING_X_PX));
+  }, [book?.title, author, baseWidthPx, view]);
 
   if (view === "cover") {
     return (
@@ -132,12 +170,15 @@ export function BookSpine({
         "book-spine relative flex h-56 max-sm:min-w-11 flex-shrink-0 flex-col items-center justify-center gap-2 rounded-[2px] py-2.5",
         isDragging && "book-spine-dragging"
       )}
-      style={{ width: widthPx, backgroundColor: color }}
+      style={{ width: spineWidthPx, backgroundColor: color }}
       title={book?.title}
     >
       <span
         ref={titleRef}
-        className="book-spine-text book-spine-title font-semibold text-white/95"
+        className={cn(
+          "book-spine-text book-spine-title font-semibold text-white/95",
+          titleWrapped && "book-spine-title-wrapped"
+        )}
         style={{ fontSize: titleFontPx }}
       >
         {book?.title}

@@ -23,6 +23,13 @@ import { Pencil } from "lucide-react";
 import { SHELF_THEMES, type Bookshelf, type ShelfTheme } from "@/types/shelf";
 import { toast } from "sonner";
 
+function errorMessage(error: unknown, fallback: string): string {
+  if (error && typeof error === "object" && "message" in error) {
+    return String((error as { message: unknown }).message);
+  }
+  return fallback;
+}
+
 export function EditShelfDialog({
   bookshelf,
   onUpdate,
@@ -43,7 +50,8 @@ export function EditShelfDialog({
     const result = await onUpdate({ name, description, theme });
     setSaving(false);
     if (result && "error" in result && result.error) {
-      toast.error("Failed to update bookshelf");
+      console.error("Failed to update bookshelf", result.error);
+      toast.error(errorMessage(result.error, "Failed to update bookshelf"));
       return;
     }
     toast.success("Bookshelf updated");
@@ -54,7 +62,8 @@ export function EditShelfDialog({
     if (!confirm(`Delete "${bookshelf.name}"? Books on it will need a new home.`)) return;
     const result = await onDelete();
     if (result && "error" in result && result.error) {
-      toast.error("Failed to delete bookshelf");
+      console.error("Failed to delete bookshelf", result.error);
+      toast.error(errorMessage(result.error, "Failed to delete bookshelf"));
       return;
     }
     toast.success("Bookshelf deleted");

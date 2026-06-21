@@ -34,6 +34,7 @@ export function Topbar({ profile }: { profile: Profile | null }) {
           <Button
             variant="ghost"
             size="sm"
+            nativeButton={false}
             render={
               <Link href={`/library/${profile.username}`} target="_blank">
                 <ExternalLink className="mr-1.5 h-4 w-4" /> Public page

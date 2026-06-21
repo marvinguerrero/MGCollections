@@ -34,8 +34,8 @@ export default function LandingPage() {
           <span className="text-lg font-semibold">MGCollections</span>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="ghost" render={<Link href="/login">Sign in</Link>} />
-          <Button render={<Link href="/register">Get started</Link>} />
+          <Button variant="ghost" nativeButton={false} render={<Link href="/login">Sign in</Link>} />
+          <Button nativeButton={false} render={<Link href="/register">Get started</Link>} />
         </div>
       </header>
 
@@ -48,8 +48,8 @@ export default function LandingPage() {
           what.
         </p>
         <div className="mt-8 flex gap-3">
-          <Button size="lg" render={<Link href="/register">Create your library</Link>} />
-          <Button size="lg" variant="outline" render={<Link href="/login">Sign in</Link>} />
+          <Button size="lg" nativeButton={false} render={<Link href="/register">Create your library</Link>} />
+          <Button size="lg" variant="outline" nativeButton={false} render={<Link href="/login">Sign in</Link>} />
         </div>
 
         <div className="mt-20 grid w-full max-w-4xl gap-6 sm:grid-cols-2">

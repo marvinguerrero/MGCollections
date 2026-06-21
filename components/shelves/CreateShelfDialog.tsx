@@ -42,7 +42,12 @@ export function CreateShelfDialog({
     setSaving(false);
 
     if (result && "error" in result && result.error) {
-      toast.error("Failed to create bookshelf");
+      console.error("Failed to create bookshelf", result.error);
+      const message =
+        result.error && typeof result.error === "object" && "message" in result.error
+          ? String((result.error as { message: unknown }).message)
+          : "Failed to create bookshelf";
+      toast.error(message);
       return;
     }
 

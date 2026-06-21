@@ -69,21 +69,22 @@ export function useShelves(userId: string | undefined) {
   async function createShelf(input: { name: string; description?: string; theme?: ShelfTheme; rowCount?: number }) {
     if (!userId) return { error: new Error("Not authenticated") };
 
-    const { data: shelf, error } = await supabase
-      .from("bookshelves")
-      .insert({
-        user_id: userId,
-        name: input.name,
-        description: input.description ?? null,
-        theme: input.theme ?? "walnut",
-        width_cm: DEFAULT_SHELF_WIDTH_CM,
-        height_cm: DEFAULT_SHELF_HEIGHT_CM,
-        sort_order: bookshelves.length,
-      })
-      .select("*")
-      .single();
+    const payload = {
+      user_id: userId,
+      name: input.name,
+      description: input.description ?? null,
+      theme: input.theme ?? "walnut",
+      width_cm: DEFAULT_SHELF_WIDTH_CM,
+      height_cm: DEFAULT_SHELF_HEIGHT_CM,
+      sort_order: bookshelves.length,
+    };
 
-    if (error || !shelf) return { error };
+    const { data: shelf, error } = await supabase.from("bookshelves").insert(payload).select("*").single();
+
+    if (error || !shelf) {
+      console.error("createShelf failed", { payload, userId, error });
+      return { error };
+    }
 
     const rowCount = input.rowCount ?? 4;
     const rowsToInsert = Array.from({ length: rowCount }, (_, i) => ({

@@ -31,4 +31,9 @@
 .book-spine-title {
   writing-mode: vertical-rl;
   text-orientation: mixed;
+  max-height: 9rem;
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }

@@ -3,7 +3,13 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
-import { getSpineColorFromCover, getSpineWidthPx, fallbackSpineColor } from "@/lib/spineUtils";
+import {
+  getSpineColorFromCover,
+  getSpineWidthClass,
+  getSpineWidthPx,
+  getSpineDisplayTitle,
+  fallbackSpineColor,
+} from "@/lib/spineUtils";
 import type { UserBook } from "@/types/book";
 
 export function BookSpine({
@@ -33,6 +39,8 @@ export function BookSpine({
   }, [book?.cover_url]);
 
   const widthPx = getSpineWidthPx(book?.page_count);
+  const widthClass = getSpineWidthClass(book?.page_count);
+  const displayTitle = getSpineDisplayTitle(book?.title, widthClass);
 
   if (view === "cover") {
     return (
@@ -64,19 +72,17 @@ export function BookSpine({
       type="button"
       onClick={onClick}
       className={cn(
-        "book-spine relative flex h-44 max-sm:min-w-11 flex-shrink-0 flex-col items-center justify-between rounded-[2px] py-2",
+        "book-spine relative flex h-44 max-sm:min-w-11 flex-shrink-0 flex-col items-center justify-center rounded-[2px] py-2",
         isDragging && "book-spine-dragging"
       )}
       style={{ width: widthPx, backgroundColor: color }}
       title={book?.title}
     >
-      {/* Desktop: vertical writing-mode text, readable at this width with a pointer for the full title. */}
-      <span className="book-spine-title hidden max-h-32 line-clamp-1 text-[11px] font-medium text-white/90 sm:block">
-        {book?.title}
-      </span>
-      {/* Mobile: rotated text at this width is unreadable and clips, so show a short horizontal label instead. */}
-      <span className="block w-full truncate px-0.5 text-center text-[10px] font-medium leading-tight text-white/90 sm:hidden">
-        {book?.title}
+      {/* Vertical writing-mode on every breakpoint, like text printed along a real spine.
+          CSS (book-spine-title) clamps height + ellipsizes so it never escapes the spine;
+          thin spines get initials instead since there's no room to spell anything out. */}
+      <span className="book-spine-title text-[11px] font-medium leading-tight text-white/90">
+        {displayTitle}
       </span>
     </button>
   );

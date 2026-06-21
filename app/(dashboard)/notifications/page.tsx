@@ -57,20 +57,20 @@ export default function NotificationsPage() {
               key={n.id}
               className="flex items-start justify-between gap-4 rounded-lg border border-zinc-800 bg-zinc-900/60 p-4"
             >
-              <div className="flex gap-3">
+              <div className="flex min-w-0 flex-1 gap-3">
                 {n.is_read ? (
                   <BellOff className="mt-0.5 h-4 w-4 flex-shrink-0 text-zinc-500" />
                 ) : (
                   <Bell className="mt-0.5 h-4 w-4 flex-shrink-0 text-blue-400" />
                 )}
-                <div>
+                <div className="min-w-0">
                   <p className="text-sm font-medium text-zinc-100">{n.title}</p>
                   {n.message && <p className="text-sm text-zinc-400">{n.message}</p>}
                   <p className="mt-1 text-xs text-zinc-600">{format(new Date(n.created_at), "MMM d, yyyy h:mm a")}</p>
                 </div>
               </div>
               {!n.is_read && (
-                <Button size="sm" variant="ghost" onClick={() => markAsRead(n.id)}>
+                <Button className="h-10 flex-shrink-0" variant="ghost" onClick={() => markAsRead(n.id)}>
                   Mark read
                 </Button>
               )}

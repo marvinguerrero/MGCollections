@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cp /tmp/mobile-check.mjs /tmp/pw-test/mobile-check.mjs)",
+      "Bash(node mobile-check.mjs)",
+      "Bash(node interaction-check.mjs)"
+    ]
+  }
+}

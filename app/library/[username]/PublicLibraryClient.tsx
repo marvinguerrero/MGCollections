@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import {
   Dialog,
   DialogContent,
@@ -15,14 +16,17 @@ import { Textarea } from "@/components/ui/textarea";
 import { BookStatusBadge } from "@/components/books/BookStatusBadge";
 import { BookshelfView } from "@/components/shelves/BookshelfView";
 import { toast } from "sonner";
+import { Home, Search, X } from "lucide-react";
 import type { BookshelfWithRows } from "@/types/shelf";
 import type { UserBook } from "@/types/book";
 
 export function PublicLibraryClient({
   ownerId,
+  ownerName,
   bookshelves,
 }: {
   ownerId: string;
+  ownerName: string;
   bookshelves: BookshelfWithRows[];
 }) {
   const [selected, setSelected] = useState<UserBook | null>(null);
@@ -31,6 +35,23 @@ export function PublicLibraryClient({
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);
+  const [query, setQuery] = useState("");
+
+  const filteredBookshelves = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return bookshelves;
+
+    return bookshelves
+      .map((shelf) => ({
+        ...shelf,
+        rows: shelf.rows.map((row) => ({
+          ...row,
+          positions: row.positions.filter((p) => p.user_book.book?.title?.toLowerCase().includes(q)),
+        })),
+      }))
+      .filter((shelf) => shelf.rows.some((row) => row.positions.length > 0));
+  }, [bookshelves, query]);
 
   async function handleSubmitRequest() {
     if (!selected || !name.trim() || !email.trim()) return;
@@ -70,18 +91,57 @@ export function PublicLibraryClient({
 
   return (
     <>
-      <div className="mx-auto max-w-5xl space-y-10 px-6 py-10">
-        {bookshelves.length === 0 ? (
-          <p className="text-center text-sm text-zinc-500">This library doesn&apos;t have any public shelves yet.</p>
+      <div className="sticky top-0 z-30 flex h-12 items-center gap-1 border-b border-zinc-800 bg-zinc-950/95 px-2 backdrop-blur supports-backdrop-filter:bg-zinc-950/80 sm:px-4">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-10 w-10 flex-shrink-0"
+          nativeButton={false}
+          render={
+            <Link href="/" aria-label="Home">
+              <Home className="h-5 w-5" />
+            </Link>
+          }
+        />
+        <span className="flex-1 truncate text-sm font-medium text-zinc-300 sm:hidden">{ownerName}</span>
+        <div className="hidden flex-1 sm:block" />
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-10 w-10 flex-shrink-0"
+          aria-label="Search this library"
+          onClick={() => setShowSearch((s) => !s)}
+        >
+          {showSearch ? <X className="h-5 w-5" /> : <Search className="h-5 w-5" />}
+        </Button>
+      </div>
+
+      {showSearch && (
+        <div className="border-b border-zinc-800 bg-zinc-950 px-3 py-2 sm:px-4">
+          <Input
+            autoFocus
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search this library by title..."
+            className="h-11"
+          />
+        </div>
+      )}
+
+      <div className="mx-auto w-full max-w-5xl space-y-10 overflow-x-hidden px-3 py-6 sm:px-6 sm:py-10">
+        {filteredBookshelves.length === 0 ? (
+          <p className="text-center text-sm text-zinc-500">
+            {query ? "No books match your search." : "This library doesn't have any public shelves yet."}
+          </p>
         ) : (
-          bookshelves.map((shelf) => (
+          filteredBookshelves.map((shelf) => (
             <BookshelfView key={shelf.id} bookshelf={shelf} readOnly onBookClick={setSelected} />
           ))
         )}
       </div>
 
       <Dialog open={!!selected} onOpenChange={(open) => !open && closeDialog()}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="sm:max-w-lg">
           {selected && (
             <>
               <DialogHeader>
@@ -106,17 +166,23 @@ export function PublicLibraryClient({
                   <h3 className="text-sm font-medium text-zinc-200">Request to borrow</h3>
                   <div className="space-y-1.5">
                     <Label htmlFor="req-name">Your name</Label>
-                    <Input id="req-name" value={name} onChange={(e) => setName(e.target.value)} />
+                    <Input id="req-name" className="h-11" value={name} onChange={(e) => setName(e.target.value)} />
                   </div>
                   <div className="space-y-1.5">
                     <Label htmlFor="req-email">Your email</Label>
-                    <Input id="req-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+                    <Input
+                      id="req-email"
+                      type="email"
+                      className="h-11"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                    />
                   </div>
                   <div className="space-y-1.5">
                     <Label htmlFor="req-message">Message (optional)</Label>
                     <Textarea id="req-message" value={message} onChange={(e) => setMessage(e.target.value)} />
                   </div>
-                  <Button className="w-full" onClick={handleSubmitRequest} disabled={requesting}>
+                  <Button className="h-11 w-full" onClick={handleSubmitRequest} disabled={requesting}>
                     {requesting ? "Sending..." : "Send request"}
                   </Button>
                 </div>

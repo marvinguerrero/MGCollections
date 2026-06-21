@@ -46,15 +46,15 @@ export default function LoansPage() {
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-semibold text-zinc-50">Loans</h1>
           <p className="text-sm text-zinc-400">Track who has your books and incoming requests.</p>
         </div>
         {lendableBooks.length > 0 && (
-          <div className="flex items-center gap-2">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             <Select value={lendBookId} onValueChange={(v) => setLendBookId(v ?? "")}>
-              <SelectTrigger className="w-56">
+              <SelectTrigger className="h-10 w-full sm:w-56">
                 <SelectValue placeholder="Choose a book to lend" />
               </SelectTrigger>
               <SelectContent>

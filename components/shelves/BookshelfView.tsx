@@ -35,15 +35,16 @@ export function BookshelfView({
     : null;
 
   const content = (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-lg font-semibold text-zinc-100">{bookshelf.name}</h2>
+    <div className="w-full max-w-full space-y-2">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <h2 className="truncate text-lg font-semibold text-zinc-100">{bookshelf.name}</h2>
           {bookshelf.description && <p className="text-sm text-zinc-400">{bookshelf.description}</p>}
         </div>
-        <div className="flex gap-1 rounded-lg border border-zinc-800 bg-zinc-900 p-1">
+        <div className="flex gap-1 self-start rounded-lg border border-zinc-800 bg-zinc-900 p-1 sm:self-auto">
           <Button
             size="sm"
+            className="h-9"
             variant={view === "spine" ? "secondary" : "ghost"}
             onClick={() => setView("spine")}
           >
@@ -51,6 +52,7 @@ export function BookshelfView({
           </Button>
           <Button
             size="sm"
+            className="h-9"
             variant={view === "cover" ? "secondary" : "ghost"}
             onClick={() => setView("cover")}
           >
@@ -60,7 +62,7 @@ export function BookshelfView({
       </div>
 
       <div
-        className={cn("shelf-frame rounded-lg border-[10px] p-3")}
+        className={cn("shelf-frame w-full max-w-full overflow-hidden rounded-lg border-[6px] p-2 sm:border-[10px] sm:p-3")}
         style={{ borderColor: theme.frame, backgroundColor: theme.shelf }}
       >
         <div className="flex flex-col gap-3">

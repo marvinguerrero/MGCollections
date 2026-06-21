@@ -11,7 +11,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ExternalLink, LogOut } from "lucide-react";
+import { ExternalLink, LogOut, Menu } from "lucide-react";
+import { MobileNavDrawer } from "@/components/layout/MobileNavDrawer";
 import type { Profile } from "@/types/user";
 
 export function Topbar({ profile }: { profile: Profile | null }) {
@@ -27,14 +28,22 @@ export function Topbar({ profile }: { profile: Profile | null }) {
   const initials = (profile?.display_name ?? profile?.username ?? "?").slice(0, 2).toUpperCase();
 
   return (
-    <header className="flex h-16 items-center justify-between border-b border-zinc-800 bg-zinc-950 px-6">
-      <div />
-      <div className="flex items-center gap-3">
+    <header className="flex h-16 items-center justify-between border-b border-zinc-800 bg-zinc-950 px-4 sm:px-6">
+      <MobileNavDrawer
+        profile={profile}
+        trigger={
+          <Button variant="ghost" size="icon" className="h-10 w-10 md:hidden">
+            <Menu className="h-5 w-5" />
+          </Button>
+        }
+      />
+      <div className="flex items-center gap-2 sm:gap-3">
         {profile?.username && (
           <Button
             variant="ghost"
             size="sm"
             nativeButton={false}
+            className="hidden sm:inline-flex"
             render={
               <Link href={`/library/${profile.username}`} target="_blank">
                 <ExternalLink className="mr-1.5 h-4 w-4" /> Public page

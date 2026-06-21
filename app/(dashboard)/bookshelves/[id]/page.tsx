@@ -40,13 +40,17 @@ export default function BookshelfDetailPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <Link href="/bookshelves" className="flex items-center gap-1.5 text-sm text-zinc-400 hover:text-zinc-200">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <Link href="/bookshelves" className="flex h-10 items-center gap-1.5 text-sm text-zinc-400 hover:text-zinc-200">
           <ArrowLeft className="h-4 w-4" /> All bookshelves
         </Link>
         <div className="flex gap-2">
           <AddBookDialog bookshelves={bookshelves} onAdded={refetch} />
-          <Button variant={editing ? "secondary" : "outline"} onClick={() => setEditing((e) => !e)}>
+          <Button
+            className="h-10"
+            variant={editing ? "secondary" : "outline"}
+            onClick={() => setEditing((e) => !e)}
+          >
             <Settings2 className="mr-1.5 h-4 w-4" /> {editing ? "Done editing" : "Edit shelf"}
           </Button>
         </div>

@@ -54,7 +54,11 @@ export default async function PublicLibraryPage({ params }: { params: Promise<{ 
   return (
     <div className="min-h-screen bg-zinc-950">
       <PublicLibraryHeader profile={profile} />
-      <PublicLibraryClient ownerId={profile.id} bookshelves={bookshelves} />
+      <PublicLibraryClient
+        ownerId={profile.id}
+        ownerName={profile.display_name ?? profile.username}
+        bookshelves={bookshelves}
+      />
     </div>
   );
 }

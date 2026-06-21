@@ -52,7 +52,7 @@ export function LendBookDialog({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={trigger ?? <Button size="sm">Lend</Button>} />
+      <DialogTrigger render={trigger ?? <Button className="h-10 w-full sm:w-auto">Lend</Button>} />
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Lend &ldquo;{userBook.book?.title}&rdquo;</DialogTitle>

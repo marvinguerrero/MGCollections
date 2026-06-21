@@ -3,24 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import {
-  BookOpen,
-  LayoutDashboard,
-  Library,
-  Rows3,
-  HandCoins,
-  Bell,
-  Settings,
-} from "lucide-react";
-
-const NAV_ITEMS = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/collection", label: "My Collection", icon: Library },
-  { href: "/bookshelves", label: "Bookshelves", icon: Rows3 },
-  { href: "/loans", label: "Loans", icon: HandCoins },
-  { href: "/notifications", label: "Notifications", icon: Bell },
-  { href: "/settings", label: "Settings", icon: Settings },
-];
+import { NAV_ITEMS } from "@/lib/navigation";
+import { BookOpen } from "lucide-react";
 
 export function Sidebar() {
   const pathname = usePathname();

@@ -64,13 +64,18 @@ export function BookSpine({
       type="button"
       onClick={onClick}
       className={cn(
-        "book-spine relative flex h-44 flex-shrink-0 flex-col items-center justify-between rounded-[2px] py-2",
+        "book-spine relative flex h-44 max-sm:min-w-11 flex-shrink-0 flex-col items-center justify-between rounded-[2px] py-2",
         isDragging && "book-spine-dragging"
       )}
       style={{ width: widthPx, backgroundColor: color }}
       title={book?.title}
     >
-      <span className="book-spine-title line-clamp-1 max-h-32 text-[11px] font-medium text-white/90">
+      {/* Desktop: vertical writing-mode text, readable at this width with a pointer for the full title. */}
+      <span className="book-spine-title hidden max-h-32 line-clamp-1 text-[11px] font-medium text-white/90 sm:block">
+        {book?.title}
+      </span>
+      {/* Mobile: rotated text at this width is unreadable and clips, so show a short horizontal label instead. */}
+      <span className="block w-full truncate px-0.5 text-center text-[10px] font-medium leading-tight text-white/90 sm:hidden">
         {book?.title}
       </span>
     </button>

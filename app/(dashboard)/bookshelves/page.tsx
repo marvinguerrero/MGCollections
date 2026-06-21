@@ -20,7 +20,7 @@ export default function BookshelvesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-semibold text-zinc-50">Bookshelves</h1>
           <p className="text-sm text-zinc-400">{bookshelves.length} shelf{bookshelves.length === 1 ? "" : "ves"}</p>
@@ -57,7 +57,7 @@ export default function BookshelvesPage() {
                     {shelf.rows.length} row{shelf.rows.length === 1 ? "" : "s"} · {bookCount} book{bookCount === 1 ? "" : "s"}
                   </p>
                 </Link>
-                <div className="absolute right-2 top-2 opacity-0 transition-opacity group-hover:opacity-100">
+                <div className="absolute right-2 top-2 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100">
                   <EditShelfDialog
                     bookshelf={shelf}
                     onUpdate={(updates) => updateShelf(shelf.id, updates)}

@@ -28,7 +28,7 @@ export function ShelfRow({
       <div
         ref={setNodeRef}
         className={cn(
-          "flex min-h-[12rem] items-end gap-1.5 overflow-x-auto rounded-t-sm px-3 pb-0 pt-3 transition-colors",
+          "flex min-h-[12rem] items-end gap-1.5 overflow-x-auto rounded-t-sm px-2 pb-0 pt-3 transition-colors sm:px-3",
           isOver && "bg-amber-500/10"
         )}
       >

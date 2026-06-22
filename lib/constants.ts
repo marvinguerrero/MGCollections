@@ -32,6 +32,9 @@ export const DEFAULT_SHELF_WIDTH_CM = 90;
 export const DEFAULT_SHELF_HEIGHT_CM = 180;
 export const DEFAULT_ROW_HEIGHT_CM = 30;
 
+/** How many physical slots a shelf row renders (filled or empty) before it scrolls. */
+export const DEFAULT_ROW_CAPACITY = 30;
+
 export const FALLBACK_SPINE_COLORS = [
   "#6b5b95",
   "#88b04b",

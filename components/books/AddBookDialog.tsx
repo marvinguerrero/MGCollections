@@ -20,6 +20,7 @@ import { Label } from "@/components/ui/label";
 import { BookSearch } from "@/components/books/BookSearch";
 import { READING_STATUS_LABELS, type NormalizedBookResult, type ReadingStatus } from "@/types/book";
 import { READING_STATUSES } from "@/lib/constants";
+import { findFirstEmptyIndex } from "@/lib/shelves/positionUtils";
 import type { BookshelfWithRows } from "@/types/shelf";
 import { Plus, BookOpen } from "lucide-react";
 import { toast } from "sonner";
@@ -50,12 +51,16 @@ export function AddBookDialog({
     setSaving(true);
 
     const [bookshelfId, shelfRowId] = shelfRowKey ? shelfRowKey.split("::") : [undefined, undefined];
+    const row = shelfRowId
+      ? bookshelves.flatMap((shelf) => shelf.rows).find((r) => r.id === shelfRowId)
+      : undefined;
+    const positionIndex = row ? findFirstEmptyIndex(row.positions) : 0;
 
     try {
       const res = await fetch("/api/books/add", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ book: selected, status, bookshelfId, shelfRowId }),
+        body: JSON.stringify({ book: selected, status, bookshelfId, shelfRowId, positionIndex }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error ?? "Failed to add book");

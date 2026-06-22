@@ -3,46 +3,96 @@
 import { useDroppable } from "@dnd-kit/core";
 import { cn } from "@/lib/utils";
 import { DraggableBook } from "@/components/shelves/DraggableBook";
+import { EmptyShelfSlot } from "@/components/shelves/EmptyShelfSlot";
+import { buildShelfSlots, type PositionWithBook } from "@/lib/shelves/positionUtils";
 import type { ShelfRowWithBooks } from "@/types/shelf";
 import type { UserBook } from "@/types/book";
+
+function FilledShelfSlot({
+  bookshelfId,
+  shelfRowId,
+  index,
+  position,
+  view,
+  isSearchActive,
+  isSearchMatch,
+  onClick,
+}: {
+  bookshelfId: string;
+  shelfRowId: string;
+  index: number;
+  position: PositionWithBook;
+  view: "spine" | "cover";
+  isSearchActive: boolean;
+  isSearchMatch: boolean;
+  onClick?: () => void;
+}) {
+  // Also droppable: dropping another book here swaps the two, rather than
+  // shifting anything else on the shelf.
+  const { setNodeRef, isOver } = useDroppable({
+    id: `${bookshelfId}::${shelfRowId}::slot-${index}`,
+    data: { positionIndex: index, occupantPositionId: position.id },
+  });
+
+  return (
+    <div ref={setNodeRef} className={cn(isOver && "shelf-slot-swap-target")}>
+      <DraggableBook
+        positionId={position.id}
+        userBook={position.user_book}
+        view={view}
+        isSearchActive={isSearchActive}
+        isSearchMatch={isSearchMatch}
+        onClick={onClick}
+      />
+    </div>
+  );
+}
 
 export function ShelfRow({
   row,
   bookshelfId,
   view,
+  editMode = false,
+  matchedUserBookIds = null,
   onBookClick,
 }: {
   row: ShelfRowWithBooks;
   bookshelfId: string;
   view: "spine" | "cover";
+  editMode?: boolean;
+  /** Set of user_book ids matching the active search; null means no search is active. */
+  matchedUserBookIds?: Set<string> | null;
   onBookClick?: (userBook: UserBook) => void;
 }) {
-  const droppableId = `${bookshelfId}::${row.id}`;
-  const { setNodeRef, isOver } = useDroppable({
-    id: droppableId,
-    data: { positionIndex: row.positions.length },
-  });
+  const slots = buildShelfSlots(row.positions);
+  const isSearchActive = matchedUserBookIds !== null;
 
   return (
     <div className="flex flex-col">
-      <div
-        ref={setNodeRef}
-        className={cn(
-          "flex min-h-[15rem] items-end gap-1.5 overflow-x-auto rounded-t-sm px-2 pb-0 pt-3 transition-colors sm:px-3",
-          isOver && "bg-amber-500/10"
-        )}
-      >
-        {row.positions.map((position) => (
-          <DraggableBook
-            key={position.id}
-            positionId={position.id}
-            userBook={position.user_book}
-            view={view}
-            onClick={() => onBookClick?.(position.user_book)}
-          />
-        ))}
-        {row.positions.length === 0 && (
-          <span className="pb-4 text-xs text-zinc-600">Drop books here</span>
+      <div className="flex min-h-[15rem] items-end gap-1.5 overflow-x-auto rounded-t-sm px-2 pb-0 pt-3 sm:px-3">
+        {slots.map((slot) =>
+          slot.position ? (
+            <FilledShelfSlot
+              key={slot.position.id}
+              bookshelfId={bookshelfId}
+              shelfRowId={row.id}
+              index={slot.index}
+              position={slot.position}
+              view={view}
+              isSearchActive={isSearchActive}
+              isSearchMatch={isSearchActive && (matchedUserBookIds?.has(slot.position.user_book_id) ?? false)}
+              onClick={() => onBookClick?.(slot.position.user_book)}
+            />
+          ) : (
+            <EmptyShelfSlot
+              key={`empty-${row.id}-${slot.index}`}
+              bookshelfId={bookshelfId}
+              shelfRowId={row.id}
+              index={slot.index}
+              view={view}
+              editMode={editMode}
+            />
+          )
         )}
       </div>
       <div className="shelf-row-board h-3 w-full rounded-b-sm" />

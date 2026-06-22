@@ -29,7 +29,25 @@
       "Bash(node spine_mobile.mjs)",
       "Bash(sips -c 600 700 --cropOffset 0 280 -o crop_zen2.png real_1280.png)",
       "Bash(sips -c 600 700 --cropOffset 0 280 -o crop_zen3.png real_1280.png)",
-      "Bash(curl -sf http://localhost:3000 -o /dev/null)"
+      "Bash(curl -sf http://localhost:3000 -o /dev/null)",
+      "Bash(npx tsc *)",
+      "Bash(npx eslint *)",
+      "Bash(node shelf_cover2.mjs)",
+      "Bash(curl -s http://localhost:3000/library/marvinguerrero -o /dev/null -w \"%{http_code}\\\\n\")",
+      "Bash(curl -s http://localhost:3000/library/marvinguerrero -o /tmp/out.html -w \"%{http_code}\\\\n\")",
+      "Bash(kill 11887)",
+      "Bash(node shelf_check.mjs)",
+      "Bash(curl -sf http://localhost:3000 -o /dev/null -w \"3000: %{http_code}\\\\n\")",
+      "Bash(curl -sf http://localhost:3002 -o /dev/null -w \"3002: %{http_code}\\\\n\")",
+      "Bash(sips -c 250 200 --cropOffset 654 280 -o crop_deepwork.png direction_1280.png)",
+      "Bash(sips -c 230 30 --cropOffset 253 312 -o crop_eatsmarter.png direction_1280.png)",
+      "Bash(sips -z 920 120 crop_eatsmarter.png --out crop_eatsmarter_big.png)",
+      "Bash(sips -c 224 28 --cropOffset 662 575 -o crop_deepwork2.png direction_1280.png)",
+      "Bash(sips -z 896 112 crop_deepwork2.png --out crop_deepwork2_big.png)",
+      "Bash(sips -c 224 28 --cropOffset 1002 575 -o crop_atomic.png direction_1280.png)",
+      "Bash(sips -z 896 112 crop_atomic.png --out crop_atomic_big.png)",
+      "Bash(sips -z 224 56 elem_Deep_Work.png --out elem_Deep_Work_big.png)",
+      "Bash(sips -z 224 56 elem_Atomic_Habits.png --out elem_Atomic_Habits_big.png)"
     ]
   }
 }

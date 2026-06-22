@@ -9,17 +9,15 @@ import {
   fallbackSpineColor,
   SPINE_HEIGHT_PX,
 } from "@/lib/spineUtils";
+import { getSearchHighlightClass } from "@/lib/searchHighlightClasses";
 import type { UserBook } from "@/types/book";
 
 const SPINE_PADDING_Y_PX = 20;
 const SPINE_PADDING_X_PX = 6;
-const TITLE_AUTHOR_GAP_PX = 3;
 
 const MAX_TITLE_FONT_PX = 15;
 const MIN_TITLE_FONT_PX = 7;
 const MIN_TITLE_FONT_PX_WRAPPED = 6;
-const MAX_AUTHOR_FONT_PX = 10;
-const MIN_AUTHOR_FONT_PX = 6.5;
 
 function letterSpacingFor(fontPx: number): string {
   if (fontPx <= 8) return "-0.02em";
@@ -31,13 +29,21 @@ export function BookSpine({
   userBook,
   view = "spine",
   isDragging = false,
+  isSearchActive = false,
+  isSearchMatch = false,
   onClick,
 }: {
   userBook: UserBook;
   view?: "spine" | "cover";
   isDragging?: boolean;
+  isSearchActive?: boolean;
+  isSearchMatch?: boolean;
   onClick?: () => void;
 }) {
+  // "Dimmed" is just (search active && not a match) — derived here instead of
+  // threading a third prop through every caller for the same information.
+  const searchStateClass = getSearchHighlightClass(isSearchActive, isSearchMatch);
+
   const book = userBook.book;
   const author = book?.authors?.[0] ?? null;
   const seed = `${book?.title ?? ""}${author ?? ""}`;
@@ -45,10 +51,7 @@ export function BookSpine({
   const baseWidthPx = getSpineWidthPx(book?.page_count);
 
   const titleRef = useRef<HTMLSpanElement>(null);
-  const authorRef = useRef<HTMLSpanElement>(null);
   const [titleFontPx, setTitleFontPx] = useState(MAX_TITLE_FONT_PX);
-  const [authorFontPx, setAuthorFontPx] = useState(MAX_AUTHOR_FONT_PX);
-  const [showAuthor, setShowAuthor] = useState(true);
   const [spineWidthPx, setSpineWidthPx] = useState(baseWidthPx);
   const [titleWrapped, setTitleWrapped] = useState(false);
 
@@ -69,9 +72,6 @@ export function BookSpine({
   // (very long titles), phase 2 lets it wrap into additional parallel
   // columns — like a real thick spine with a two- or three-line title —
   // widening the spine itself if the page-count width can't hold them.
-  // The author runs in its own vertical column to the right of the title
-  // (each gets the full spine height independently) and disappears first
-  // if the spine isn't wide enough for both columns side by side.
   useLayoutEffect(() => {
     if (view !== "spine") return;
     const titleEl = titleRef.current;
@@ -97,28 +97,11 @@ export function BookSpine({
       setTitleFontPx(size);
       setTitleWrapped(false);
       setSpineWidthPx(baseWidthPx);
-
-      const authorEl = authorRef.current;
-      const remainingWidth = availableWidth - titleEl.scrollWidth - (author ? TITLE_AUTHOR_GAP_PX : 0);
-      if (author && authorEl && remainingWidth >= MIN_AUTHOR_FONT_PX) {
-        authorEl.style.whiteSpace = "nowrap";
-        let authorSize = MAX_AUTHOR_FONT_PX;
-        authorEl.style.fontSize = `${authorSize}px`;
-        while (authorSize > MIN_AUTHOR_FONT_PX && authorEl.scrollHeight > availableHeight) {
-          authorSize -= 0.5;
-          authorEl.style.fontSize = `${authorSize}px`;
-        }
-        setAuthorFontPx(authorSize);
-        setShowAuthor(authorEl.scrollHeight <= availableHeight && authorEl.scrollWidth <= remainingWidth);
-      } else {
-        setShowAuthor(false);
-      }
       return;
     }
 
     // Phase 2: too long for one column even at the floor font — wrap into
     // multiple parallel columns instead of clipping or abbreviating.
-    setShowAuthor(false);
     titleEl.style.whiteSpace = "normal";
     titleEl.style.overflowWrap = "break-word";
     titleEl.style.height = `${availableHeight}px`;
@@ -137,7 +120,7 @@ export function BookSpine({
     // If it still needs more room than the page-count width allows, grow the
     // spine itself rather than lose any of the title.
     setSpineWidthPx(Math.max(baseWidthPx, titleEl.scrollWidth + SPINE_PADDING_X_PX));
-  }, [book?.title, author, baseWidthPx, view]);
+  }, [book?.title, baseWidthPx, view]);
 
   if (view === "cover") {
     return (
@@ -145,8 +128,9 @@ export function BookSpine({
         type="button"
         onClick={onClick}
         className={cn(
-          "relative h-56 w-28 flex-shrink-0 overflow-hidden rounded shadow-lg transition-transform hover:-translate-y-1",
-          isDragging && "book-spine-dragging"
+          "relative h-56 w-28 flex-shrink-0 overflow-hidden rounded shadow-lg transition-all duration-300 ease-out hover:-translate-y-1",
+          isDragging && "book-spine-dragging",
+          searchStateClass
         )}
         title={book?.title}
       >
@@ -169,8 +153,9 @@ export function BookSpine({
       type="button"
       onClick={onClick}
       className={cn(
-        "book-spine relative flex h-56 max-sm:min-w-11 flex-shrink-0 flex-row items-center justify-center gap-[3px] rounded-[2px] py-2.5",
-        isDragging && "book-spine-dragging"
+        "book-spine relative flex h-56 max-sm:min-w-11 flex-shrink-0 items-center justify-center rounded-[2px] py-2.5",
+        isDragging && "book-spine-dragging",
+        searchStateClass
       )}
       style={{ width: spineWidthPx, backgroundColor: color }}
       title={book?.title}
@@ -185,19 +170,6 @@ export function BookSpine({
       >
         {book?.title}
       </span>
-      {author && (
-        <span
-          ref={authorRef}
-          className={cn(
-            "book-spine-text book-spine-author font-normal text-white/70",
-            !showAuthor && "invisible absolute"
-          )}
-          style={{ fontSize: authorFontPx }}
-          aria-hidden={showAuthor ? undefined : "true"}
-        >
-          {author}
-        </span>
-      )}
     </button>
   );
 }

@@ -16,7 +16,7 @@
 }
 
 .book-spine {
-  transition: transform 120ms ease, box-shadow 120ms ease;
+  transition: transform 300ms ease-out, box-shadow 300ms ease-out, opacity 300ms ease-out;
   box-shadow: inset -3px 0 6px rgba(0, 0, 0, 0.35), inset 3px 0 4px rgba(255, 255, 255, 0.08);
 }
 
@@ -29,23 +29,18 @@
 }
 
 /*
- * Real book spines read bottom-to-top with letter heads facing left (tilt
- * your head left to read it normally) — vertical-rl alone reads top-to-bottom
- * facing right, so it needs the 180deg flip on top.
+ * Modern English book spines read top-to-bottom with letter heads facing
+ * right (tilt your head right to read it normally) — that's what
+ * writing-mode: vertical-rl gives natively, with no extra rotation.
  */
 .book-spine-text {
   writing-mode: vertical-rl;
   text-orientation: mixed;
-  transform: rotate(180deg);
   white-space: nowrap;
 }
 
 .book-spine-title {
   line-height: 1.05;
-}
-
-.book-spine-author {
-  line-height: 1.1;
 }
 
 /* Very long titles wrap into parallel columns (like a real multi-line spine)
@@ -54,4 +49,39 @@
   line-height: 1.15;
   letter-spacing: 0;
   text-align: center;
+}
+
+/* Owner edit mode only — a faint outline so an empty slot reads as droppable.
+   Public view renders this same box with no border, just blank shelf space. */
+.empty-shelf-slot-outline {
+  border: 1px dashed rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.empty-shelf-slot-over {
+  border-color: rgba(245, 158, 11, 0.7);
+  background: rgba(245, 158, 11, 0.14);
+}
+
+.shelf-slot-swap-target {
+  transform: translateY(-4px);
+  filter: drop-shadow(0 4px 6px rgba(245, 158, 11, 0.4));
+}
+
+/* Plays once when a book newly becomes a search match — settles into the
+   resting scale-105 set by the Tailwind utility class on the same element. */
+@keyframes shelf-pop {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.08);
+  }
+  100% {
+    transform: scale(1.05);
+  }
+}
+
+.shelf-search-match {
+  animation: shelf-pop 220ms ease-out;
 }

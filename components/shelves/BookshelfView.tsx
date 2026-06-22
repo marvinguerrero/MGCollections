@@ -17,11 +17,14 @@ export function BookshelfView({
   onMoveBook,
   onBookClick,
   readOnly = false,
+  matchedUserBookIds = null,
 }: {
   bookshelf: BookshelfWithRows;
   onMoveBook?: (target: DragBookMoveTarget) => void | Promise<void>;
   onBookClick?: (userBook: UserBook) => void;
   readOnly?: boolean;
+  /** Set of user_book ids matching the active search; null means no search is active. */
+  matchedUserBookIds?: Set<string> | null;
 }) {
   const [view, setView] = useState<"spine" | "cover">("spine");
   const { sensors, activeId, handleDragStart, handleDragEnd, handleDragCancel } = useDragBooks({
@@ -67,7 +70,15 @@ export function BookshelfView({
       >
         <div className="flex flex-col gap-3">
           {bookshelf.rows.map((row) => (
-            <ShelfRow key={row.id} row={row} bookshelfId={bookshelf.id} view={view} onBookClick={onBookClick} />
+            <ShelfRow
+              key={row.id}
+              row={row}
+              bookshelfId={bookshelf.id}
+              view={view}
+              editMode={!readOnly}
+              matchedUserBookIds={matchedUserBookIds}
+              onBookClick={onBookClick}
+            />
           ))}
           {bookshelf.rows.length === 0 && (
             <p className="py-8 text-center text-sm text-zinc-300/70">

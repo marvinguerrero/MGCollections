@@ -14,6 +14,8 @@ export interface DragBookMoveTarget {
   shelfRowId: string;
   bookshelfId: string;
   positionIndex: number;
+  /** Set when the drop lands on an occupied slot — the two books should swap. */
+  occupantPositionId?: string;
 }
 
 interface UseDragBooksOptions {
@@ -47,12 +49,17 @@ export function useDragBooks({ onMove }: UseDragBooksOptions) {
     if (!bookshelfId || !shelfRowId) return;
 
     const positionIndex = typeof over.data.current?.positionIndex === "number" ? over.data.current.positionIndex : 0;
+    const occupantPositionId = over.data.current?.occupantPositionId as string | undefined;
+
+    // Dropped back onto the same slot it came from — nothing to do.
+    if (occupantPositionId === String(active.id)) return;
 
     onMove({
       positionId: String(active.id),
       shelfRowId,
       bookshelfId,
       positionIndex,
+      occupantPositionId,
     });
   }
 

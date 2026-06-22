@@ -4,6 +4,8 @@ import { useCallback, useEffect, useState } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabaseClient";
 import type { BookshelfWithRows, ShelfTheme } from "@/types/shelf";
 import { DEFAULT_ROW_HEIGHT_CM, DEFAULT_SHELF_HEIGHT_CM, DEFAULT_SHELF_WIDTH_CM } from "@/lib/constants";
+import { moveBookToEmptySlot, removeBookKeepGap, swapBooks } from "@/lib/shelves/positionUtils";
+import { persistBookMove, persistBookSwap } from "@/lib/shelves/updateBookPosition";
 
 export function useShelves(userId: string | undefined) {
   const supabase = createSupabaseBrowserClient();
@@ -129,21 +131,50 @@ export function useShelves(userId: string | undefined) {
     return { error };
   }
 
+  /**
+   * Moves a book to an empty slot, or — if the target slot is already
+   * occupied — swaps the two books. Updates local state immediately so the
+   * drag feels instant; only the affected book_positions row(s) are written
+   * to Supabase, and the optimistic update is rolled back if that write fails.
+   */
   async function moveBookPosition(
     positionId: string,
-    target: { shelfRowId: string; bookshelfId: string; positionIndex: number }
+    target: { shelfRowId: string; bookshelfId: string; positionIndex: number; occupantPositionId?: string }
   ) {
-    const { error } = await supabase
-      .from("book_positions")
-      .update({
-        shelf_row_id: target.shelfRowId,
-        bookshelf_id: target.bookshelfId,
-        position_index: target.positionIndex,
-      })
-      .eq("id", positionId);
+    const previous = bookshelves;
 
-    if (!error) await fetchShelves();
+    if (target.occupantPositionId && target.occupantPositionId !== positionId) {
+      const result = swapBooks(previous, positionId, target.occupantPositionId);
+      if (!result) return { error: new Error("Could not find books to swap") };
+
+      setBookshelves(result.layout);
+      const [a, b] = result.moved;
+      const error = await persistBookSwap(
+        supabase,
+        { id: a.id, bookshelfId: a.bookshelf_id, shelfRowId: a.shelf_row_id, positionIndex: a.position_index },
+        { id: b.id, bookshelfId: b.bookshelf_id, shelfRowId: b.shelf_row_id, positionIndex: b.position_index }
+      );
+      if (error) setBookshelves(previous);
+      return { error };
+    }
+
+    const result = moveBookToEmptySlot(previous, positionId, target);
+    if (!result) return { error: new Error("Could not find book to move") };
+
+    setBookshelves(result.layout);
+    const error = await persistBookMove(supabase, {
+      id: result.moved.id,
+      bookshelfId: result.moved.bookshelf_id,
+      shelfRowId: result.moved.shelf_row_id,
+      positionIndex: result.moved.position_index,
+    });
+    if (error) setBookshelves(previous);
     return { error };
+  }
+
+  /** Drops a book from local shelf state without a network refetch — the slot stays empty. */
+  function removeBookFromShelves(userBookId: string) {
+    setBookshelves((prev) => removeBookKeepGap(prev, userBookId));
   }
 
   return {
@@ -156,5 +187,6 @@ export function useShelves(userId: string | undefined) {
     addRow,
     removeRow,
     moveBookPosition,
+    removeBookFromShelves,
   };
 }

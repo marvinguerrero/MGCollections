@@ -14,7 +14,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { BookStatusBadge } from "@/components/books/BookStatusBadge";
+import { LibrarySearchBar } from "@/components/books/LibrarySearchBar";
 import { BookshelfView } from "@/components/shelves/BookshelfView";
+import { useLibrarySearch } from "@/hooks/useLibrarySearch";
 import { toast } from "sonner";
 import { Home, Search, X } from "lucide-react";
 import type { BookshelfWithRows } from "@/types/shelf";
@@ -36,22 +38,14 @@ export function PublicLibraryClient({
   const [message, setMessage] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
-  const [query, setQuery] = useState("");
 
-  const filteredBookshelves = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return bookshelves;
-
-    return bookshelves
-      .map((shelf) => ({
-        ...shelf,
-        rows: shelf.rows.map((row) => ({
-          ...row,
-          positions: row.positions.filter((p) => p.user_book.book?.title?.toLowerCase().includes(q)),
-        })),
-      }))
-      .filter((shelf) => shelf.rows.some((row) => row.positions.length > 0));
-  }, [bookshelves, query]);
+  // Search never removes or reorders books — it only highlights matches in
+  // place, like scanning a real shelf.
+  const allUserBooks = useMemo(
+    () => bookshelves.flatMap((shelf) => shelf.rows.flatMap((row) => row.positions.map((p) => p.user_book))),
+    [bookshelves]
+  );
+  const search = useLibrarySearch(allUserBooks, bookshelves);
 
   async function handleSubmitRequest() {
     if (!selected || !name.trim() || !email.trim()) return;
@@ -118,25 +112,36 @@ export function PublicLibraryClient({
 
       {showSearch && (
         <div className="border-b border-zinc-800 bg-zinc-950 px-3 py-2 sm:px-4">
-          <Input
+          <LibrarySearchBar
             autoFocus
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search this library by title..."
-            className="h-11"
+            query={search.query}
+            onQueryChange={search.setQuery}
+            onClear={search.clearQuery}
+            matchCount={search.matchCount}
+            isSearchActive={search.isSearchActive}
+            placeholder="Search this library by title, author, ISBN, or status..."
           />
         </div>
       )}
 
       <div className="mx-auto w-full max-w-5xl space-y-10 overflow-x-hidden px-3 py-6 sm:px-6 sm:py-10">
-        {filteredBookshelves.length === 0 ? (
-          <p className="text-center text-sm text-zinc-500">
-            {query ? "No books match your search." : "This library doesn't have any public shelves yet."}
-          </p>
+        {bookshelves.length === 0 ? (
+          <p className="text-center text-sm text-zinc-500">This library doesn&apos;t have any public shelves yet.</p>
         ) : (
-          filteredBookshelves.map((shelf) => (
-            <BookshelfView key={shelf.id} bookshelf={shelf} readOnly onBookClick={setSelected} />
-          ))
+          <>
+            {search.hasNoMatches && (
+              <p className="text-center text-sm text-zinc-500">No books match your search.</p>
+            )}
+            {bookshelves.map((shelf) => (
+              <BookshelfView
+                key={shelf.id}
+                bookshelf={shelf}
+                readOnly
+                onBookClick={setSelected}
+                matchedUserBookIds={search.matchedUserBookIds}
+              />
+            ))}
+          </>
         )}
       </div>
 

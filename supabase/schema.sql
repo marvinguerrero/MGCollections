@@ -158,6 +158,31 @@ create index if not exists idx_loans_owner_id on loans (owner_id);
 create index if not exists idx_loans_user_book_id on loans (user_book_id);
 
 -- =========================================
+-- collection_events
+-- User-created calendar events. Kept generic (item_type/item_id-free-form
+-- metadata) so non-book collection types can reuse this table later.
+-- =========================================
+create table if not exists collection_events (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references profiles (id) on delete cascade,
+  user_book_id uuid references user_books (id) on delete cascade,
+  item_type text not null default 'book',
+  event_type text not null
+    check (event_type in ('added_to_collection', 'started_reading', 'read', 'finished_reading', 'lent', 'returned', 'custom')),
+  title text not null,
+  description text,
+  event_date date not null,
+  cover_url text,
+  metadata jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists idx_collection_events_user_id on collection_events (user_id);
+create index if not exists idx_collection_events_user_book_id on collection_events (user_book_id);
+create index if not exists idx_collection_events_event_date on collection_events (event_date);
+
+-- =========================================
 -- notifications
 -- =========================================
 create table if not exists notifications (
@@ -186,6 +211,11 @@ $$ language plpgsql;
 drop trigger if exists trg_book_positions_updated_at on book_positions;
 create trigger trg_book_positions_updated_at
   before update on book_positions
+  for each row execute function set_updated_at();
+
+drop trigger if exists trg_collection_events_updated_at on collection_events;
+create trigger trg_collection_events_updated_at
+  before update on collection_events
   for each row execute function set_updated_at();
 
 -- =========================================
@@ -243,6 +273,7 @@ alter table shelf_rows enable row level security;
 alter table book_positions enable row level security;
 alter table borrow_requests enable row level security;
 alter table loans enable row level security;
+alter table collection_events enable row level security;
 alter table notifications enable row level security;
 
 -- ---------- profiles ----------
@@ -443,6 +474,23 @@ create policy "Owners can update their own loans"
 create policy "Owners can delete their own loans"
   on loans for delete
   using (auth.uid() = owner_id);
+
+-- ---------- collection_events ----------
+create policy "Users can view their own collection_events"
+  on collection_events for select
+  using (auth.uid() = user_id);
+
+create policy "Users can insert their own collection_events"
+  on collection_events for insert
+  with check (auth.uid() = user_id);
+
+create policy "Users can update their own collection_events"
+  on collection_events for update
+  using (auth.uid() = user_id);
+
+create policy "Users can delete their own collection_events"
+  on collection_events for delete
+  using (auth.uid() = user_id);
 
 -- ---------- notifications ----------
 create policy "Users can view their own notifications"

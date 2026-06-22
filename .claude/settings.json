@@ -47,7 +47,16 @@
       "Bash(sips -c 224 28 --cropOffset 1002 575 -o crop_atomic.png direction_1280.png)",
       "Bash(sips -z 896 112 crop_atomic.png --out crop_atomic_big.png)",
       "Bash(sips -z 224 56 elem_Deep_Work.png --out elem_Deep_Work_big.png)",
-      "Bash(sips -z 224 56 elem_Atomic_Habits.png --out elem_Atomic_Habits_big.png)"
+      "Bash(sips -z 224 56 elem_Atomic_Habits.png --out elem_Atomic_Habits_big.png)",
+      "Bash(npx next *)",
+      "Bash(curl -s -o /dev/null -w \"3003: %{http_code}\\\\n\" http://localhost:3003/calendar)",
+      "Bash(curl -s -o /dev/null -w \"3000: %{http_code}\\\\n\" http://localhost:3000/calendar)",
+      "Bash(curl -s -D - -o /dev/null http://localhost:3003/calendar)",
+      "Bash(pkill -f \"next dev.*3001\")",
+      "Bash(kill 85492)",
+      "Bash(kill 79805)",
+      "Bash(curl -s -D - -o /dev/null http://localhost:3000/collection)",
+      "Bash(curl -s -D - -o /dev/null http://localhost:3000/calendar)"
     ]
   }
 }

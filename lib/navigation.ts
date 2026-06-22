@@ -5,6 +5,7 @@ import {
   HandCoins,
   Bell,
   Settings,
+  Calendar,
   type LucideIcon,
 } from "lucide-react";
 
@@ -19,6 +20,7 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/collection", label: "My Collection", icon: Library },
   { href: "/bookshelves", label: "Bookshelves", icon: Rows3 },
   { href: "/loans", label: "Loans", icon: HandCoins },
+  { href: "/calendar", label: "Calendar", icon: Calendar },
   { href: "/notifications", label: "Notifications", icon: Bell },
   { href: "/settings", label: "Settings", icon: Settings },
 ];

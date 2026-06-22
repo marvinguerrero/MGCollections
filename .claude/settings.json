@@ -8,7 +8,28 @@
       "Bash(node zoom-check.mjs)",
       "Bash(node full-title-check.mjs)",
       "Bash(node test.mjs)",
-      "Bash(node check.mjs)"
+      "Bash(node check.mjs)",
+      "Bash(npx --no-install playwright --version)",
+      "Bash(node -e \"require.resolve\\('playwright'\\)\")",
+      "Bash(npm init *)",
+      "Bash(npm install *)",
+      "Bash(npx playwright *)",
+      "Bash(node spine_shot.mjs)",
+      "Bash(timeout 30 bash -c 'until curl -sf http://localhost:3000 >/dev/null; do sleep 1; done')",
+      "Bash(curl -s http://localhost:3000 -o /dev/null -w \"%{http_code}\\\\n\")",
+      "Bash(pkill -f \"next dev\" -P)",
+      "Bash(curl -s http://localhost:3001 -o /dev/null -w \"%{http_code}\\\\n\")",
+      "Bash(node -e ' *)",
+      "Bash(node spine_real.mjs)",
+      "Bash(sips -c 600 1100 --cropOffset 0 60 -o crop_1280.png real_1280.png)",
+      "Bash(sips -g pixelWidth -g pixelHeight real_360.png)",
+      "Bash(sips -c 500 360 --cropOffset 0 200 -o crop_360.png real_360.png)",
+      "Bash(sips -c 900 360 -o crop_360_full.png real_360.png)",
+      "Bash(sips -c 600 700 --cropOffset 0 280 -o crop_zen.png real_1280.png)",
+      "Bash(node spine_mobile.mjs)",
+      "Bash(sips -c 600 700 --cropOffset 0 280 -o crop_zen2.png real_1280.png)",
+      "Bash(sips -c 600 700 --cropOffset 0 280 -o crop_zen3.png real_1280.png)",
+      "Bash(curl -sf http://localhost:3000 -o /dev/null)"
     ]
   }
 }

@@ -13,7 +13,7 @@ import type { UserBook } from "@/types/book";
 
 const SPINE_PADDING_Y_PX = 20;
 const SPINE_PADDING_X_PX = 6;
-const TITLE_AUTHOR_GAP_PX = 8;
+const TITLE_AUTHOR_GAP_PX = 3;
 
 const MAX_TITLE_FONT_PX = 15;
 const MIN_TITLE_FONT_PX = 7;
@@ -69,8 +69,9 @@ export function BookSpine({
   // (very long titles), phase 2 lets it wrap into additional parallel
   // columns — like a real thick spine with a two- or three-line title —
   // widening the spine itself if the page-count width can't hold them.
-  // The author line only gets whatever vertical space is left over in a
-  // single-column title, and disappears first if there isn't any.
+  // The author runs in its own vertical column to the right of the title
+  // (each gets the full spine height independently) and disappears first
+  // if the spine isn't wide enough for both columns side by side.
   useLayoutEffect(() => {
     if (view !== "spine") return;
     const titleEl = titleRef.current;
@@ -97,17 +98,18 @@ export function BookSpine({
       setTitleWrapped(false);
       setSpineWidthPx(baseWidthPx);
 
-      const remainingForAuthor = availableHeight - titleEl.scrollHeight - (author ? TITLE_AUTHOR_GAP_PX : 0);
       const authorEl = authorRef.current;
-      if (author && authorEl && remainingForAuthor >= MIN_AUTHOR_FONT_PX * 2) {
+      const remainingWidth = availableWidth - titleEl.scrollWidth - (author ? TITLE_AUTHOR_GAP_PX : 0);
+      if (author && authorEl && remainingWidth >= MIN_AUTHOR_FONT_PX) {
+        authorEl.style.whiteSpace = "nowrap";
         let authorSize = MAX_AUTHOR_FONT_PX;
         authorEl.style.fontSize = `${authorSize}px`;
-        while (authorSize > MIN_AUTHOR_FONT_PX && authorEl.scrollHeight > remainingForAuthor) {
+        while (authorSize > MIN_AUTHOR_FONT_PX && authorEl.scrollHeight > availableHeight) {
           authorSize -= 0.5;
           authorEl.style.fontSize = `${authorSize}px`;
         }
         setAuthorFontPx(authorSize);
-        setShowAuthor(authorEl.scrollHeight <= remainingForAuthor);
+        setShowAuthor(authorEl.scrollHeight <= availableHeight && authorEl.scrollWidth <= remainingWidth);
       } else {
         setShowAuthor(false);
       }
@@ -167,7 +169,7 @@ export function BookSpine({
       type="button"
       onClick={onClick}
       className={cn(
-        "book-spine relative flex h-56 max-sm:min-w-11 flex-shrink-0 flex-col items-center justify-center gap-2 rounded-[2px] py-2.5",
+        "book-spine relative flex h-56 max-sm:min-w-11 flex-shrink-0 flex-row items-center justify-center gap-[3px] rounded-[2px] py-2.5",
         isDragging && "book-spine-dragging"
       )}
       style={{ width: spineWidthPx, backgroundColor: color }}

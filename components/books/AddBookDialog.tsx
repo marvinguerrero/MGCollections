@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import {
   Dialog,
   DialogContent,
@@ -17,9 +18,17 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { BookSearch } from "@/components/books/BookSearch";
-import { READING_STATUS_LABELS, type NormalizedBookResult, type ReadingStatus } from "@/types/book";
-import { READING_STATUSES } from "@/lib/constants";
+import {
+  BOOK_CONDITIONS,
+  READING_STATUS_LABELS,
+  type BookCondition,
+  type NormalizedBookResult,
+  type ReadingStatus,
+} from "@/types/book";
+import { DEFAULT_BOOK_CONDITION, DEFAULT_PURCHASE_CURRENCY, READING_STATUSES } from "@/lib/constants";
 import { findFirstEmptyIndex } from "@/lib/shelves/positionUtils";
 import type { BookshelfWithRows } from "@/types/shelf";
 import { Plus, BookOpen } from "lucide-react";
@@ -40,14 +49,42 @@ export function AddBookDialog({
   const [shelfRowKey, setShelfRowKey] = useState<string>("");
   const [saving, setSaving] = useState(false);
 
+  const [genre, setGenre] = useState("");
+  const [condition, setCondition] = useState<BookCondition>(DEFAULT_BOOK_CONDITION);
+  const [purchasePrice, setPurchasePrice] = useState("");
+  const [purchaseCurrency, setPurchaseCurrency] = useState(DEFAULT_PURCHASE_CURRENCY);
+  const [dateBought, setDateBought] = useState("");
+  const [purchaseLocation, setPurchaseLocation] = useState("");
+  const [notes, setNotes] = useState("");
+  const [priceError, setPriceError] = useState<string | null>(null);
+
   function reset() {
     setSelected(null);
     setStatus("owned_unread");
     setShelfRowKey("");
+    setGenre("");
+    setCondition(DEFAULT_BOOK_CONDITION);
+    setPurchasePrice("");
+    setPurchaseCurrency(DEFAULT_PURCHASE_CURRENCY);
+    setDateBought("");
+    setPurchaseLocation("");
+    setNotes("");
+    setPriceError(null);
+  }
+
+  function handleSelect(result: NormalizedBookResult) {
+    setSelected(result);
+    setGenre(result.genre ?? "");
   }
 
   async function handleAdd() {
     if (!selected) return;
+
+    if (purchasePrice && !Number.isFinite(Number(purchasePrice))) {
+      setPriceError("Price must be a number");
+      return;
+    }
+    setPriceError(null);
     setSaving(true);
 
     const [bookshelfId, shelfRowId] = shelfRowKey ? shelfRowKey.split("::") : [undefined, undefined];
@@ -60,7 +97,20 @@ export function AddBookDialog({
       const res = await fetch("/api/books/add", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ book: selected, status, bookshelfId, shelfRowId, positionIndex }),
+        body: JSON.stringify({
+          book: selected,
+          status,
+          bookshelfId,
+          shelfRowId,
+          positionIndex,
+          genre: genre || undefined,
+          condition,
+          purchasePrice: purchasePrice || undefined,
+          purchaseCurrency: purchaseCurrency || undefined,
+          dateBought: dateBought || undefined,
+          purchaseLocation: purchaseLocation || undefined,
+          notes: notes || undefined,
+        }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error ?? "Failed to add book");
@@ -101,15 +151,30 @@ export function AddBookDialog({
         </DialogHeader>
 
         {!selected ? (
-          <BookSearch onSelect={setSelected} />
+          <BookSearch onSelect={handleSelect} />
         ) : (
           <div className="space-y-4">
             <div className="flex gap-3 rounded-lg border border-zinc-800 bg-zinc-900/60 p-3">
+              <div className="relative h-20 w-14 flex-shrink-0 overflow-hidden rounded bg-zinc-800">
+                {selected.coverUrl ? (
+                  <Image src={selected.coverUrl} alt={selected.title} fill className="object-cover" unoptimized />
+                ) : (
+                  <div className="flex h-full items-center justify-center text-[10px] text-zinc-500">No cover</div>
+                )}
+              </div>
               <div className="flex-1">
                 <p className="text-sm font-medium text-zinc-100">{selected.title}</p>
-                <p className="text-xs text-zinc-400">{selected.authors.join(", ")}</p>
+                <p className="text-xs text-zinc-400">{selected.authors.join(", ") || "Unknown author"}</p>
+                {selected.genre && <p className="mt-1 text-xs text-zinc-500">Genre (from API): {selected.genre}</p>}
               </div>
-              <Button variant="ghost" size="sm" onClick={() => setSelected(null)}>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setSelected(null);
+                  setGenre("");
+                }}
+              >
                 Change
               </Button>
             </div>
@@ -149,6 +214,97 @@ export function AddBookDialog({
                 </Select>
               </div>
             )}
+
+            <div className="space-y-4 border-t border-zinc-800 pt-4">
+              <p className="text-xs font-medium text-zinc-500">Personal inventory (optional)</p>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label htmlFor="add-book-genre">Genre</Label>
+                  <Input
+                    id="add-book-genre"
+                    value={genre}
+                    onChange={(e) => setGenre(e.target.value)}
+                    placeholder="e.g. Fantasy"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Condition</Label>
+                  <Select value={condition} onValueChange={(v) => setCondition(v as BookCondition)}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {BOOK_CONDITIONS.map((c) => (
+                        <SelectItem key={c} value={c}>
+                          {c}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-[1fr_auto] gap-3">
+                <div className="space-y-2">
+                  <Label htmlFor="add-book-price">Purchase price</Label>
+                  <Input
+                    id="add-book-price"
+                    type="number"
+                    inputMode="decimal"
+                    step="0.01"
+                    min="0"
+                    value={purchasePrice}
+                    onChange={(e) => {
+                      setPurchasePrice(e.target.value);
+                      setPriceError(null);
+                    }}
+                    placeholder="0.00"
+                    aria-invalid={!!priceError}
+                  />
+                  {priceError && <p className="text-xs text-red-400">{priceError}</p>}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="add-book-currency">Currency</Label>
+                  <Input
+                    id="add-book-currency"
+                    value={purchaseCurrency}
+                    onChange={(e) => setPurchaseCurrency(e.target.value)}
+                    className="w-20"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="add-book-date-bought">Date bought</Label>
+                <Input
+                  id="add-book-date-bought"
+                  type="date"
+                  value={dateBought}
+                  onChange={(e) => setDateBought(e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="add-book-location">Store / Where bought</Label>
+                <Input
+                  id="add-book-location"
+                  value={purchaseLocation}
+                  onChange={(e) => setPurchaseLocation(e.target.value)}
+                  placeholder="e.g. National Bookstore"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="add-book-notes">Notes</Label>
+                <Textarea
+                  id="add-book-notes"
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder="Optional notes"
+                />
+              </div>
+            </div>
 
             <Button className="w-full" onClick={handleAdd} disabled={saving}>
               {saving ? "Adding..." : "Add to collection"}

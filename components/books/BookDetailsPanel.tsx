@@ -17,9 +17,13 @@ import {
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
+import { Star } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { BookStatusBadge } from "@/components/books/BookStatusBadge";
-import { READING_STATUS_LABELS, type ReadingStatus, type UserBook } from "@/types/book";
+import { EditBookDialog } from "@/components/books/EditBookDialog";
+import { READING_STATUS_LABELS, type ReadingStatus, type UserBook, type UserBookEditableFields } from "@/types/book";
 import { READING_STATUSES } from "@/lib/constants";
+import type { BookshelfWithRows } from "@/types/shelf";
 
 export function BookDetailsPanel({
   userBook,
@@ -28,6 +32,9 @@ export function BookDetailsPanel({
   onStatusChange,
   onLendableChange,
   onRemove,
+  onSaveDetails,
+  onAssignShelf,
+  bookshelves,
   readOnly = false,
 }: {
   userBook: UserBook | null;
@@ -36,6 +43,9 @@ export function BookDetailsPanel({
   onStatusChange?: (status: ReadingStatus) => void;
   onLendableChange?: (isLendable: boolean) => void;
   onRemove?: () => void;
+  onSaveDetails?: (updates: UserBookEditableFields) => Promise<{ error: unknown }>;
+  onAssignShelf?: (target: { bookshelfId: string; shelfRowId: string } | null) => Promise<{ error: unknown }>;
+  bookshelves?: BookshelfWithRows[];
   readOnly?: boolean;
 }) {
   if (!userBook) return null;
@@ -44,8 +54,11 @@ export function BookDetailsPanel({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
-        <DialogHeader>
+        <DialogHeader className="flex-row items-center justify-between pr-8">
           <DialogTitle>{book?.title ?? "Untitled"}</DialogTitle>
+          {!readOnly && onSaveDetails && (
+            <EditBookDialog userBook={userBook} bookshelves={bookshelves} onSave={onSaveDetails} onAssignShelf={onAssignShelf} />
+          )}
         </DialogHeader>
 
         <div className="flex gap-4">
@@ -69,6 +82,45 @@ export function BookDetailsPanel({
         {book?.description && (
           <p className="max-h-32 overflow-y-auto text-sm text-zinc-400">{book.description}</p>
         )}
+
+        <div className="space-y-1.5 rounded-lg border border-zinc-800 bg-zinc-900/40 p-3 text-xs text-zinc-400">
+          <p className="text-xs font-medium text-zinc-500">Personal Information</p>
+          {userBook.genre && <p>Genre: {userBook.genre}</p>}
+          {userBook.condition && <p>Condition: {userBook.condition}</p>}
+          {userBook.purchase_price != null && (
+            <p>
+              Price: {userBook.purchase_currency ?? ""} {userBook.purchase_price}
+            </p>
+          )}
+          {userBook.date_bought && <p>Bought: {userBook.date_bought}</p>}
+          {userBook.purchase_location && <p>Where bought: {userBook.purchase_location}</p>}
+          {userBook.rating != null && (
+            <div className="flex items-center gap-1">
+              <span>Rating:</span>
+              {[1, 2, 3, 4, 5].map((value) => (
+                <Star
+                  key={value}
+                  className={cn(
+                    "h-3.5 w-3.5",
+                    value <= userBook.rating! ? "fill-amber-400 text-amber-400" : "text-zinc-700"
+                  )}
+                />
+              ))}
+            </div>
+          )}
+          {userBook.favorite && <p>★ Favorite</p>}
+          {userBook.tags && userBook.tags.length > 0 && <p>Tags: {userBook.tags.join(", ")}</p>}
+          {userBook.notes && <p>Notes: {userBook.notes}</p>}
+          {!userBook.genre &&
+            !userBook.condition &&
+            userBook.purchase_price == null &&
+            !userBook.date_bought &&
+            !userBook.purchase_location &&
+            userBook.rating == null &&
+            !userBook.favorite &&
+            (!userBook.tags || userBook.tags.length === 0) &&
+            !userBook.notes && <p className="text-zinc-600">No personal details yet.</p>}
+        </div>
 
         {!readOnly && (
           <div className="space-y-4 border-t border-zinc-800 pt-4">

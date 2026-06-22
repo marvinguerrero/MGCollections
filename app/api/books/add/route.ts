@@ -1,14 +1,58 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabaseServer";
-import type { NormalizedBookResult, ReadingStatus } from "@/types/book";
+import { BOOK_CONDITIONS } from "@/types/book";
+import type { BookCondition, NormalizedBookResult, ReadingStatus } from "@/types/book";
 
-interface AddBookBody {
+interface InventoryFields {
+  condition?: BookCondition | null;
+  notes?: string | null;
+  genre?: string | null;
+  purchasePrice?: number | string | null;
+  purchaseCurrency?: string | null;
+  dateBought?: string | null;
+  purchaseLocation?: string | null;
+}
+
+interface AddBookBody extends InventoryFields {
   book: NormalizedBookResult;
   status?: ReadingStatus;
   isLendable?: boolean;
   bookshelfId?: string;
   shelfRowId?: string;
   positionIndex?: number;
+}
+
+/** Blank optional fields must save as null, not empty strings/NaN. */
+function normalizeInventoryFields(body: AddBookBody) {
+  const { condition, notes, genre, purchasePrice, purchaseCurrency, dateBought, purchaseLocation } = body;
+
+  if (condition && !BOOK_CONDITIONS.includes(condition)) {
+    return { error: `Invalid condition: ${condition}` } as const;
+  }
+
+  let price: number | null = null;
+  if (purchasePrice !== undefined && purchasePrice !== null && purchasePrice !== "") {
+    price = typeof purchasePrice === "number" ? purchasePrice : Number(purchasePrice);
+    if (!Number.isFinite(price)) {
+      return { error: "Purchase price must be numeric" } as const;
+    }
+  }
+
+  if (dateBought && Number.isNaN(new Date(dateBought).getTime())) {
+    return { error: "Date bought must be a valid date" } as const;
+  }
+
+  return {
+    fields: {
+      condition: condition || null,
+      notes: notes?.trim() || null,
+      genre: genre?.trim() || null,
+      purchase_price: price,
+      purchase_currency: purchaseCurrency?.trim() || null,
+      date_bought: dateBought || null,
+      purchase_location: purchaseLocation?.trim() || null,
+    },
+  } as const;
 }
 
 export async function POST(request: NextRequest) {
@@ -26,6 +70,11 @@ export async function POST(request: NextRequest) {
 
   if (!book?.title) {
     return NextResponse.json({ error: "Missing book data" }, { status: 400 });
+  }
+
+  const normalized = normalizeInventoryFields(body);
+  if ("error" in normalized) {
+    return NextResponse.json({ error: normalized.error }, { status: 400 });
   }
 
   let existing = null;
@@ -86,6 +135,7 @@ export async function POST(request: NextRequest) {
       book_id: bookRecord.id,
       status,
       is_lendable: isLendable,
+      ...normalized.fields,
     })
     .select("*")
     .single();

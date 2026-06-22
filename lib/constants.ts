@@ -4,6 +4,7 @@ import type { ShelfTheme } from "@/types/shelf";
 export const READING_STATUSES: ReadingStatus[] = [
   "owned_unread",
   "reading",
+  "on_hold",
   "finished",
   "wishlist",
   "borrowed",
@@ -14,6 +15,7 @@ export const READING_STATUSES: ReadingStatus[] = [
 export const STATUS_BADGE_STYLES: Record<ReadingStatus, string> = {
   owned_unread: "bg-zinc-700 text-zinc-100",
   reading: "bg-blue-600 text-blue-50",
+  on_hold: "bg-orange-600 text-orange-50",
   finished: "bg-emerald-600 text-emerald-50",
   wishlist: "bg-purple-600 text-purple-50",
   borrowed: "bg-amber-600 text-amber-50",
@@ -27,6 +29,9 @@ export const SHELF_THEME_STYLES: Record<ShelfTheme, { shelf: string; frame: stri
   ebony: { shelf: "#2a2622", frame: "#171513" },
   white: { shelf: "#e8e4dc", frame: "#bdb6a8" },
 };
+
+export const DEFAULT_PURCHASE_CURRENCY = "PHP";
+export const DEFAULT_BOOK_CONDITION = "Good";
 
 export const DEFAULT_SHELF_WIDTH_CM = 90;
 export const DEFAULT_SHELF_HEIGHT_CM = 180;

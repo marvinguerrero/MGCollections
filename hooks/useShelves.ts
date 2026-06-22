@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabaseClient";
 import type { BookshelfWithRows, ShelfTheme } from "@/types/shelf";
 import { DEFAULT_ROW_HEIGHT_CM, DEFAULT_SHELF_HEIGHT_CM, DEFAULT_SHELF_WIDTH_CM } from "@/lib/constants";
-import { moveBookToEmptySlot, removeBookKeepGap, swapBooks } from "@/lib/shelves/positionUtils";
+import { findFirstEmptyIndex, moveBookToEmptySlot, removeBookKeepGap, swapBooks } from "@/lib/shelves/positionUtils";
 import { persistBookMove, persistBookSwap } from "@/lib/shelves/updateBookPosition";
 
 export function useShelves(userId: string | undefined) {
@@ -177,6 +177,53 @@ export function useShelves(userId: string | undefined) {
     setBookshelves((prev) => removeBookKeepGap(prev, userBookId));
   }
 
+  /**
+   * Used by EditBookDialog's shelf-assignment field — a coarser-grained
+   * operation than drag-and-drop's moveBookPosition, so it just refetches
+   * afterwards rather than computing the optimistic layout itself.
+   */
+  async function assignBookToShelf(userBookId: string, target: { bookshelfId: string; shelfRowId: string } | null) {
+    const currentPosition = bookshelves
+      .flatMap((shelf) => shelf.rows.flatMap((row) => row.positions))
+      .find((p) => p.user_book_id === userBookId);
+
+    if (!target) {
+      if (!currentPosition) return { error: null };
+      const { error } = await supabase.from("book_positions").delete().eq("id", currentPosition.id);
+      if (!error) await fetchShelves();
+      return { error };
+    }
+
+    const targetRow = bookshelves
+      .find((s) => s.id === target.bookshelfId)
+      ?.rows.find((r) => r.id === target.shelfRowId);
+    if (!targetRow) return { error: new Error("Shelf row not found") };
+
+    const positionIndex = findFirstEmptyIndex(
+      currentPosition?.shelf_row_id === target.shelfRowId
+        ? targetRow.positions.filter((p) => p.id !== currentPosition.id)
+        : targetRow.positions
+    );
+
+    if (currentPosition) {
+      const { error } = await supabase
+        .from("book_positions")
+        .update({ bookshelf_id: target.bookshelfId, shelf_row_id: target.shelfRowId, position_index: positionIndex })
+        .eq("id", currentPosition.id);
+      if (!error) await fetchShelves();
+      return { error };
+    }
+
+    const { error } = await supabase.from("book_positions").insert({
+      user_book_id: userBookId,
+      bookshelf_id: target.bookshelfId,
+      shelf_row_id: target.shelfRowId,
+      position_index: positionIndex,
+    });
+    if (!error) await fetchShelves();
+    return { error };
+  }
+
   return {
     bookshelves,
     loading,
@@ -188,5 +235,6 @@ export function useShelves(userId: string | undefined) {
     removeRow,
     moveBookPosition,
     removeBookFromShelves,
+    assignBookToShelf,
   };
 }

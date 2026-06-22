@@ -1,11 +1,14 @@
 export type ReadingStatus =
   | "owned_unread"
   | "reading"
+  | "on_hold"
   | "finished"
   | "wishlist"
   | "borrowed"
   | "lent_out"
   | "dnf";
+
+export type BookCondition = "New" | "Like New" | "Good" | "Fair" | "Poor" | "Damaged";
 
 export type BookSource = "google" | "openlibrary";
 
@@ -39,6 +42,10 @@ export interface NormalizedBookResult {
   coverUrl: string | null;
   source: BookSource;
   externalId: string;
+  /** First genre/category/subject reported by the source API, if any. */
+  genre: string | null;
+  /** All genres/categories/subjects reported by the source API. */
+  genres: string[];
 }
 
 export interface UserBook {
@@ -46,20 +53,48 @@ export interface UserBook {
   user_id: string;
   book_id: string;
   status: ReadingStatus;
-  condition: string | null;
-  notes: string | null;
   is_lendable: boolean;
   date_added: string;
   created_at: string;
   book?: Book;
+  // Personal inventory fields — user-specific, not part of the shared book catalog.
+  condition: BookCondition | null;
+  notes: string | null;
+  purchase_price: number | null;
+  purchase_currency: string | null;
+  date_bought: string | null;
+  purchase_location: string | null;
+  genre: string | null;
+  rating: number | null;
+  favorite: boolean;
+  tags: string[];
 }
 
+/** Fields an owner can change via EditBookDialog — everything except identity/global book data. */
+export type UserBookEditableFields = Partial<{
+  status: ReadingStatus;
+  genre: string | null;
+  condition: BookCondition | null;
+  notes: string | null;
+  purchase_price: number | null;
+  purchase_currency: string | null;
+  date_bought: string | null;
+  purchase_location: string | null;
+  rating: number | null;
+  favorite: boolean;
+  tags: string[];
+}>;
+
 export const READING_STATUS_LABELS: Record<ReadingStatus, string> = {
-  owned_unread: "Owned (Unread)",
+  owned_unread: "Unread",
   reading: "Reading",
+  on_hold: "On Hold",
   finished: "Finished",
   wishlist: "Wishlist",
   borrowed: "Borrowed",
   lent_out: "Lent Out",
   dnf: "DNF",
 };
+
+export const BOOK_CONDITIONS: BookCondition[] = ["New", "Like New", "Good", "Fair", "Poor", "Damaged"];
+export const RATING_VALUES = [1, 2, 3, 4, 5] as const;

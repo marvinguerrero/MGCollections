@@ -50,7 +50,7 @@ create table if not exists user_books (
   user_id uuid not null references profiles (id) on delete cascade,
   book_id uuid not null references books (id) on delete cascade,
   status text not null default 'owned_unread'
-    check (status in ('owned_unread', 'reading', 'finished', 'wishlist', 'borrowed', 'lent_out', 'dnf')),
+    check (status in ('owned_unread', 'reading', 'on_hold', 'finished', 'wishlist', 'borrowed', 'lent_out', 'dnf')),
   condition text,
   notes text,
   is_lendable boolean not null default true,
@@ -61,6 +61,33 @@ create table if not exists user_books (
 create index if not exists idx_user_books_user_id on user_books (user_id);
 create index if not exists idx_user_books_book_id on user_books (book_id);
 create index if not exists idx_user_books_status on user_books (status);
+
+-- Personal inventory fields. These are user-specific (a given physical copy's
+-- price, condition, etc.), so they live on user_books rather than the shared
+-- books catalog. `condition` and `notes` already existed (unused until now);
+-- this just adds the remaining inventory columns alongside them.
+alter table user_books add column if not exists purchase_price numeric;
+alter table user_books add column if not exists purchase_currency text default 'PHP';
+alter table user_books add column if not exists date_bought date;
+alter table user_books add column if not exists purchase_location text;
+alter table user_books add column if not exists genre text;
+
+do $$
+begin
+  alter table user_books add constraint user_books_condition_check
+    check (condition in ('New', 'Like New', 'Good', 'Fair', 'Poor', 'Damaged'));
+exception
+  when duplicate_object then null;
+end $$;
+
+-- Edit Book fields: rating, favorite, tags, and the "On Hold" status.
+alter table user_books add column if not exists rating integer check (rating between 1 and 5);
+alter table user_books add column if not exists favorite boolean not null default false;
+alter table user_books add column if not exists tags text[] not null default '{}';
+
+alter table user_books drop constraint if exists user_books_status_check;
+alter table user_books add constraint user_books_status_check
+  check (status in ('owned_unread', 'reading', 'on_hold', 'finished', 'wishlist', 'borrowed', 'lent_out', 'dnf'));
 
 -- =========================================
 -- bookshelves

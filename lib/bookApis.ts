@@ -9,6 +9,7 @@ interface GoogleVolume {
     publishedDate?: string;
     description?: string;
     pageCount?: number;
+    categories?: string[];
     industryIdentifiers?: { type: string; identifier: string }[];
     imageLinks?: { thumbnail?: string; smallThumbnail?: string };
   };
@@ -23,6 +24,7 @@ interface OpenLibraryDoc {
   isbn?: string[];
   number_of_pages_median?: number;
   cover_i?: number;
+  subject?: string[];
 }
 
 function pickIsbn(identifiers: { type: string; identifier: string }[] | undefined) {
@@ -47,6 +49,7 @@ export async function searchGoogleBooks(query: string): Promise<NormalizedBookRe
     const info = item.volumeInfo ?? {};
     const { isbn10, isbn13 } = pickIsbn(info.industryIdentifiers);
     const coverUrl = info.imageLinks?.thumbnail?.replace("http://", "https://") ?? null;
+    const genres = info.categories ?? [];
 
     return {
       title: info.title ?? "Untitled",
@@ -61,6 +64,8 @@ export async function searchGoogleBooks(query: string): Promise<NormalizedBookRe
       coverUrl,
       source: "google" as const,
       externalId: item.id,
+      genre: genres[0] ?? null,
+      genres,
     };
   });
 }
@@ -81,6 +86,7 @@ export async function searchOpenLibrary(query: string): Promise<NormalizedBookRe
     const coverUrl = doc.cover_i
       ? `https://covers.openlibrary.org/b/id/${doc.cover_i}-L.jpg`
       : null;
+    const genres = doc.subject ?? [];
 
     return {
       title: doc.title ?? "Untitled",
@@ -95,6 +101,8 @@ export async function searchOpenLibrary(query: string): Promise<NormalizedBookRe
       coverUrl,
       source: "openlibrary" as const,
       externalId: doc.key,
+      genre: genres[0] ?? null,
+      genres,
     };
   });
 }

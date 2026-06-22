@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabaseClient";
-import type { ReadingStatus, UserBook } from "@/types/book";
+import type { ReadingStatus, UserBook, UserBookEditableFields } from "@/types/book";
 
 export function useBooks(userId: string | undefined) {
   const supabase = createSupabaseBrowserClient();
@@ -54,5 +54,29 @@ export function useBooks(userId: string | undefined) {
     return { error };
   }
 
-  return { userBooks, loading, refetch: fetchBooks, updateStatus, updateLendable, removeBook };
+  /**
+   * Used by EditBookDialog to save any combination of personal fields in one
+   * request. Applies the change to local state immediately and rolls back
+   * if the write fails, so the UI never needs a full refetch/reload.
+   */
+  async function updatePersonalDetails(userBookId: string, updates: UserBookEditableFields) {
+    const previous = userBooks;
+    setUserBooks((prev) => prev.map((ub) => (ub.id === userBookId ? { ...ub, ...updates } : ub)));
+
+    const { error } = await supabase.from("user_books").update(updates).eq("id", userBookId);
+    if (error) {
+      setUserBooks(previous);
+    }
+    return { error };
+  }
+
+  return {
+    userBooks,
+    loading,
+    refetch: fetchBooks,
+    updateStatus,
+    updateLendable,
+    updatePersonalDetails,
+    removeBook,
+  };
 }

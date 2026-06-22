@@ -27,9 +27,18 @@ export default function BookshelfDetailPage() {
     supabase.auth.getUser().then(({ data }) => setUserId(data.user?.id));
   }, [supabase]);
 
-  const { bookshelves, loading, refetch, updateShelf, addRow, removeRow, moveBookPosition, removeBookFromShelves } =
-    useShelves(userId);
-  const { updateStatus, updateLendable, removeBook } = useBooks(userId);
+  const {
+    bookshelves,
+    loading,
+    refetch,
+    updateShelf,
+    addRow,
+    removeRow,
+    moveBookPosition,
+    removeBookFromShelves,
+    assignBookToShelf,
+  } = useShelves(userId);
+  const { updateStatus, updateLendable, updatePersonalDetails, removeBook } = useBooks(userId);
 
   const bookshelf = bookshelves.find((s) => s.id === params.id);
 
@@ -110,6 +119,17 @@ export default function BookshelfDetailPage() {
         userBook={selected}
         open={!!selected}
         onOpenChange={(open) => !open && setSelected(null)}
+        bookshelves={bookshelves}
+        onSaveDetails={async (updates) => {
+          if (!selected) return { error: null };
+          const result = await updatePersonalDetails(selected.id, updates);
+          if (!result.error) setSelected((prev) => prev && { ...prev, ...updates });
+          return result;
+        }}
+        onAssignShelf={(target) => {
+          if (!selected) return Promise.resolve({ error: null });
+          return assignBookToShelf(selected.id, target);
+        }}
         onStatusChange={async (status) => {
           if (!selected) return;
           await updateStatus(selected.id, status);

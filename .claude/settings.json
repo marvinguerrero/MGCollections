@@ -56,7 +56,15 @@
       "Bash(kill 85492)",
       "Bash(kill 79805)",
       "Bash(curl -s -D - -o /dev/null http://localhost:3000/collection)",
-      "Bash(curl -s -D - -o /dev/null http://localhost:3000/calendar)"
+      "Bash(curl -s -D - -o /dev/null http://localhost:3000/calendar)",
+      "Bash(command -v supabase)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" \"https://aibcbjmlqcdfmsfgitcg.supabase.co/rest/v1/collection_events?select=id&limit=1\" -H \"apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFpYmNiam1scWNkZm1zZmdpdGNnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIwMTkwMTMsImV4cCI6MjA5NzU5NTAxM30.KLqwnxG8snMSlhnbBJ5f2mu682Umez1j0Sla2uP9pmU\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" \"https://aibcbjmlqcdfmsfgitcg.supabase.co/rest/v1/user_books?select=id&limit=1\" -H \"apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFpYmNiam1scWNkZm1zZmdpdGNnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIwMTkwMTMsImV4cCI6MjA5NzU5NTAxM30.KLqwnxG8snMSlhnbBJ5f2mu682Umez1j0Sla2uP9pmU\")",
+      "Bash(supabase login *)",
+      "Bash(curl -s \"https://aibcbjmlqcdfmsfgitcg.supabase.co/rest/v1/user_books?select=genre,condition,purchase_price,purchase_currency,date_bought,purchase_location,notes&limit=1\" -H \"apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFpYmNiam1scWNkZm1zZmdpdGNnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIwMTkwMTMsImV4cCI6MjA5NzU5NTAxM30.KLqwnxG8snMSlhnbBJ5f2mu682Umez1j0Sla2uP9pmU\" -H \"Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFpYmNiam1scWNkZm1zZmdpdGNnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIwMTkwMTMsImV4cCI6MjA5NzU5NTAxM30.KLqwnxG8snMSlhnbBJ5f2mu682Umez1j0Sla2uP9pmU\")",
+      "Bash(curl -s -D - -o /dev/null http://localhost:3000/bookshelves)",
+      "Bash(curl -s -D - -o /dev/null http://localhost:3000/bookshelves/test-id)",
+      "Bash(git mv *)"
     ]
   }
 }

@@ -40,7 +40,7 @@ export default function CollectionPage() {
     supabase.auth.getUser().then(({ data }) => setUserId(data.user?.id));
   }, [supabase]);
 
-  const { userBooks, loading, refetch, updateStatus, updateLendable, updatePersonalDetails, removeBook } =
+  const { userBooks, loading, refetch, updateStatus, updateLendable, updatePersonalDetails, patchLocal, removeBook } =
     useBooks(userId);
   const { bookshelves, assignBookToShelf } = useShelves(userId);
   const search = useLibrarySearch(userBooks, bookshelves);
@@ -178,6 +178,11 @@ export default function CollectionPage() {
           if (!selected) return;
           await removeBook(selected.id);
           setSelected(null);
+        }}
+        onProgressUpdated={(updates) => {
+          if (!selected) return;
+          patchLocal(selected.id, updates);
+          setSelected((prev) => prev && { ...prev, ...updates });
         }}
       />
 

@@ -38,7 +38,7 @@ export default function BookshelfDetailPage() {
     removeBookFromShelves,
     assignBookToShelf,
   } = useShelves(userId);
-  const { updateStatus, updateLendable, updatePersonalDetails, removeBook } = useBooks(userId);
+  const { updateStatus, updateLendable, updatePersonalDetails, patchLocal, removeBook } = useBooks(userId);
 
   const bookshelf = bookshelves.find((s) => s.id === params.id);
 
@@ -145,6 +145,11 @@ export default function BookshelfDetailPage() {
           const { error } = await removeBook(selected.id);
           if (!error) removeBookFromShelves(selected.id);
           setSelected(null);
+        }}
+        onProgressUpdated={(updates) => {
+          if (!selected) return;
+          patchLocal(selected.id, updates);
+          setSelected((prev) => prev && { ...prev, ...updates });
         }}
       />
     </div>

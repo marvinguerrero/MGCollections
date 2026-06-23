@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Image from "next/image";
 import {
   Dialog,
@@ -17,10 +18,12 @@ import {
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
-import { Star } from "lucide-react";
+import { BookOpen, Star } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BookStatusBadge } from "@/components/books/BookStatusBadge";
 import { EditBookDialog } from "@/components/books/EditBookDialog";
+import { ReadingSessionDialog } from "@/components/books/ReadingSessionDialog";
+import { useReadingSessions } from "@/hooks/useReadingSessions";
 import { READING_STATUS_LABELS, type ReadingStatus, type UserBook, type UserBookEditableFields } from "@/types/book";
 import { READING_STATUSES } from "@/lib/constants";
 import type { BookshelfWithRows } from "@/types/shelf";
@@ -34,6 +37,7 @@ export function BookDetailsPanel({
   onRemove,
   onSaveDetails,
   onAssignShelf,
+  onProgressUpdated,
   bookshelves,
   readOnly = false,
 }: {
@@ -45,11 +49,19 @@ export function BookDetailsPanel({
   onRemove?: () => void;
   onSaveDetails?: (updates: UserBookEditableFields) => Promise<{ error: unknown }>;
   onAssignShelf?: (target: { bookshelfId: string; shelfRowId: string } | null) => Promise<{ error: unknown }>;
+  /** Called with the server-computed progress fields right after a reading session is saved. */
+  onProgressUpdated?: (updates: Partial<UserBook>) => void;
   bookshelves?: BookshelfWithRows[];
   readOnly?: boolean;
 }) {
+  const [readingSessionOpen, setReadingSessionOpen] = useState(false);
+  const { sessions: recentSessions, logSession } = useReadingSessions(open ? userBook?.id : undefined);
+
   if (!userBook) return null;
   const book = userBook.book;
+  const pageCount = book?.page_count ?? null;
+  const progressPercent =
+    pageCount && pageCount > 0 ? Math.min(100, Math.round((userBook.current_page / pageCount) * 100)) : null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -81,6 +93,49 @@ export function BookDetailsPanel({
 
         {book?.description && (
           <p className="max-h-32 overflow-y-auto text-sm text-zinc-400">{book.description}</p>
+        )}
+
+        {!readOnly && (
+          <div className="space-y-2 rounded-lg border border-zinc-800 bg-zinc-900/40 p-3">
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-xs font-medium text-zinc-500">Reading Progress</p>
+                <p className="text-sm text-zinc-300">
+                  {pageCount
+                    ? `${userBook.current_page} / ${pageCount} pages${progressPercent != null ? `, ${progressPercent}%` : ""}`
+                    : userBook.current_page > 0
+                      ? `Page ${userBook.current_page}`
+                      : "Not started"}
+                </p>
+                {userBook.last_read_at && (
+                  <p className="text-xs text-zinc-500">
+                    Last read {new Date(userBook.last_read_at).toLocaleDateString()}
+                  </p>
+                )}
+              </div>
+              <Button size="sm" onClick={() => setReadingSessionOpen(true)} className="flex-shrink-0">
+                <BookOpen className="mr-1.5 h-4 w-4" /> Read
+              </Button>
+            </div>
+
+            {progressPercent != null && (
+              <div className="h-1.5 w-full overflow-hidden rounded-full bg-zinc-800">
+                <div className="h-full rounded-full bg-emerald-500" style={{ width: `${progressPercent}%` }} />
+              </div>
+            )}
+
+            {recentSessions.length > 0 && (
+              <div className="space-y-1 border-t border-zinc-800 pt-2">
+                <p className="text-xs font-medium text-zinc-500">Recent sessions</p>
+                {recentSessions.slice(0, 3).map((session) => (
+                  <p key={session.id} className="text-xs text-zinc-400">
+                    {session.read_date}: pages {session.start_page}–{session.end_page}
+                    {session.minutes_read != null ? ` · ${session.minutes_read} min` : ""}
+                  </p>
+                ))}
+              </div>
+            )}
+          </div>
         )}
 
         <div className="space-y-1.5 rounded-lg border border-zinc-800 bg-zinc-900/40 p-3 text-xs text-zinc-400">
@@ -157,6 +212,22 @@ export function BookDetailsPanel({
           </div>
         )}
       </DialogContent>
+
+      {!readOnly && (
+        <ReadingSessionDialog
+          userBook={userBook}
+          open={readingSessionOpen}
+          onOpenChange={setReadingSessionOpen}
+          onLogSession={async (input) => {
+            const result = await logSession(input);
+            if (!result.error && result.data) {
+              onProgressUpdated?.(result.data.userBookUpdates);
+            }
+            return result;
+          }}
+          onMarkFinished={onStatusChange ? async () => onStatusChange("finished") : undefined}
+        />
+      )}
     </Dialog>
   );
 }

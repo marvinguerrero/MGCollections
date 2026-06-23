@@ -68,6 +68,9 @@ export interface UserBook {
   rating: number | null;
   favorite: boolean;
   tags: string[];
+  // Reading progress — updated whenever a reading session is saved.
+  current_page: number;
+  last_read_at: string | null;
 }
 
 /** Fields an owner can change via EditBookDialog — everything except identity/global book data. */

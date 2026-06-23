@@ -210,6 +210,41 @@ create index if not exists idx_collection_events_user_book_id on collection_even
 create index if not exists idx_collection_events_event_date on collection_events (event_date);
 
 -- =========================================
+-- reading_sessions
+-- Manual or timer-based reading logs. Each saved session also inserts a
+-- 'read' row into collection_events (no schema change needed there).
+-- =========================================
+create table if not exists reading_sessions (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references profiles (id) on delete cascade,
+  user_book_id uuid not null references user_books (id) on delete cascade,
+  start_page integer not null check (start_page >= 0),
+  end_page integer not null check (end_page >= 0),
+  pages_read integer,
+  minutes_read integer,
+  notes text,
+  read_date date not null,
+  started_at timestamptz,
+  ended_at timestamptz,
+  timer_used boolean not null default false,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists idx_reading_sessions_user_id on reading_sessions (user_id);
+create index if not exists idx_reading_sessions_user_book_id on reading_sessions (user_book_id);
+create index if not exists idx_reading_sessions_read_date on reading_sessions (read_date);
+
+drop trigger if exists trg_reading_sessions_updated_at on reading_sessions;
+create trigger trg_reading_sessions_updated_at
+  before update on reading_sessions
+  for each row execute function set_updated_at();
+
+-- Progress tracking on user_books, updated whenever a reading session is saved.
+alter table user_books add column if not exists current_page integer not null default 0;
+alter table user_books add column if not exists last_read_at timestamptz;
+
+-- =========================================
 -- notifications
 -- =========================================
 create table if not exists notifications (
@@ -301,6 +336,7 @@ alter table book_positions enable row level security;
 alter table borrow_requests enable row level security;
 alter table loans enable row level security;
 alter table collection_events enable row level security;
+alter table reading_sessions enable row level security;
 alter table notifications enable row level security;
 
 -- ---------- profiles ----------
@@ -517,6 +553,23 @@ create policy "Users can update their own collection_events"
 
 create policy "Users can delete their own collection_events"
   on collection_events for delete
+  using (auth.uid() = user_id);
+
+-- ---------- reading_sessions ----------
+create policy "Users can view their own reading_sessions"
+  on reading_sessions for select
+  using (auth.uid() = user_id);
+
+create policy "Users can insert their own reading_sessions"
+  on reading_sessions for insert
+  with check (auth.uid() = user_id);
+
+create policy "Users can update their own reading_sessions"
+  on reading_sessions for update
+  using (auth.uid() = user_id);
+
+create policy "Users can delete their own reading_sessions"
+  on reading_sessions for delete
   using (auth.uid() = user_id);
 
 -- ---------- notifications ----------

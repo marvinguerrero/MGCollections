@@ -70,6 +70,15 @@ export function useBooks(userId: string | undefined) {
     return { error };
   }
 
+  /**
+   * Merges a partial update into local state without writing to Supabase —
+   * for callers (like reading sessions) that already persisted the change
+   * server-side and just need the UI to reflect it without a refetch.
+   */
+  function patchLocal(userBookId: string, updates: Partial<UserBook>) {
+    setUserBooks((prev) => prev.map((ub) => (ub.id === userBookId ? { ...ub, ...updates } : ub)));
+  }
+
   return {
     userBooks,
     loading,
@@ -77,6 +86,7 @@ export function useBooks(userId: string | undefined) {
     updateStatus,
     updateLendable,
     updatePersonalDetails,
+    patchLocal,
     removeBook,
   };
 }

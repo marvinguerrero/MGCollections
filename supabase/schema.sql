@@ -195,7 +195,11 @@ create table if not exists collection_events (
   user_book_id uuid references user_books (id) on delete cascade,
   item_type text not null default 'book',
   event_type text not null
-    check (event_type in ('added_to_collection', 'started_reading', 'read', 'finished_reading', 'lent', 'returned', 'custom')),
+    check (event_type in (
+      'added_to_collection', 'started_reading', 'read', 'finished_reading',
+      'lent', 'borrowed', 'returned', 'purchased', 'maintenance',
+      'warranty_expiry', 'service', 'custom'
+    )),
   title text not null,
   description text,
   event_date date not null,
@@ -243,6 +247,84 @@ create trigger trg_reading_sessions_updated_at
 -- Progress tracking on user_books, updated whenever a reading session is saved.
 alter table user_books add column if not exists current_page integer not null default 0;
 alter table user_books add column if not exists last_read_at timestamptz;
+
+-- Flexible categories: free text, independent of item_type, defaults to
+-- 'Uncategorized'. Default suggestions live in app code (lib/constants.ts),
+-- not as a DB enum/table, so users can type any custom category.
+alter table user_books add column if not exists category text not null default 'Uncategorized';
+create index if not exists idx_user_books_category on user_books (category);
+
+-- =========================================
+-- custom_items
+-- Non-book collection items. Separate table — no bookshelves, reading,
+-- or calendar events; reuses the same flexible-category concept as books.
+-- =========================================
+create table if not exists custom_items (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references profiles (id) on delete cascade,
+  name text not null,
+  category text not null default 'Uncategorized',
+  brand text,
+  model text,
+  purchase_price numeric,
+  purchase_currency text default 'PHP',
+  date_bought date,
+  purchase_location text,
+  condition text check (condition in ('New', 'Like New', 'Good', 'Fair', 'Poor', 'Damaged')),
+  notes text,
+  image_url text,
+  location text,
+  warranty_expiry date,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists idx_custom_items_user_id on custom_items (user_id);
+create index if not exists idx_custom_items_category on custom_items (category);
+
+-- Idempotent for databases that already had custom_items/collection_events
+-- created before this column/constraint existed.
+alter table custom_items add column if not exists location text;
+alter table custom_items add column if not exists warranty_expiry date;
+alter table collection_events drop constraint if exists collection_events_event_type_check;
+alter table collection_events add constraint collection_events_event_type_check
+  check (event_type in (
+    'added_to_collection', 'started_reading', 'read', 'finished_reading',
+    'lent', 'borrowed', 'returned', 'purchased', 'maintenance',
+    'warranty_expiry', 'service', 'custom'
+  ));
+
+drop trigger if exists trg_custom_items_updated_at on custom_items;
+create trigger trg_custom_items_updated_at
+  before update on custom_items
+  for each row execute function set_updated_at();
+
+-- Storage bucket for the optional image upload field — public read (same
+-- as book covers being public URLs), writes restricted to the owner's
+-- own "<user_id>/..." folder.
+insert into storage.buckets (id, name, public)
+values ('item-images', 'item-images', true)
+on conflict (id) do nothing;
+
+drop policy if exists "Public can view item images" on storage.objects;
+create policy "Public can view item images"
+  on storage.objects for select
+  using (bucket_id = 'item-images');
+
+drop policy if exists "Users can upload their own item images" on storage.objects;
+create policy "Users can upload their own item images"
+  on storage.objects for insert
+  with check (bucket_id = 'item-images' and (storage.foldername(name))[1] = auth.uid()::text);
+
+drop policy if exists "Users can update their own item images" on storage.objects;
+create policy "Users can update their own item images"
+  on storage.objects for update
+  using (bucket_id = 'item-images' and (storage.foldername(name))[1] = auth.uid()::text);
+
+drop policy if exists "Users can delete their own item images" on storage.objects;
+create policy "Users can delete their own item images"
+  on storage.objects for delete
+  using (bucket_id = 'item-images' and (storage.foldername(name))[1] = auth.uid()::text);
 
 -- =========================================
 -- notifications
@@ -337,6 +419,7 @@ alter table borrow_requests enable row level security;
 alter table loans enable row level security;
 alter table collection_events enable row level security;
 alter table reading_sessions enable row level security;
+alter table custom_items enable row level security;
 alter table notifications enable row level security;
 
 -- ---------- profiles ----------
@@ -570,6 +653,23 @@ create policy "Users can update their own reading_sessions"
 
 create policy "Users can delete their own reading_sessions"
   on reading_sessions for delete
+  using (auth.uid() = user_id);
+
+-- ---------- custom_items ----------
+create policy "Users can view their own custom_items"
+  on custom_items for select
+  using (auth.uid() = user_id);
+
+create policy "Users can insert their own custom_items"
+  on custom_items for insert
+  with check (auth.uid() = user_id);
+
+create policy "Users can update their own custom_items"
+  on custom_items for update
+  using (auth.uid() = user_id);
+
+create policy "Users can delete their own custom_items"
+  on custom_items for delete
   using (auth.uid() = user_id);
 
 -- ---------- notifications ----------

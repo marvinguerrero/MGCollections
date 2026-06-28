@@ -15,17 +15,41 @@
   );
 }
 
+/* Edit Mode only — a slight highlight around the shelf so it's clear
+   rearranging is "live", without restyling the shelf itself. */
+.shelf-frame-edit-mode {
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.35);
+}
+
 .book-spine {
-  transition: transform 300ms ease-out, box-shadow 300ms ease-out, opacity 300ms ease-out;
+  transition: transform 300ms ease-out, box-shadow 300ms ease-out, opacity 300ms ease-out, filter 150ms ease-out;
   box-shadow: inset -3px 0 6px rgba(0, 0, 0, 0.35), inset 3px 0 4px rgba(255, 255, 255, 0.08);
 }
 
+/* Browse Mode: a subtle brightness cue that it's clickable, with no lift —
+   lifting reads as "draggable", which it isn't while locked. */
 .book-spine:hover {
+  filter: brightness(1.08);
+}
+
+/* Edit Mode only — the lift signals "this can be picked up and moved". */
+.bookshelf-edit-mode .book-spine:hover {
   transform: translateY(-6px);
+  filter: none;
 }
 
 .book-spine-dragging {
   opacity: 0.4;
+}
+
+/* Browse Mode keeps the button's default pointer cursor (no override here).
+   Edit Mode signals "pick up and move" with grab/grabbing. */
+.bookshelf-edit-mode .book-spine {
+  cursor: grab;
+}
+
+.bookshelf-edit-mode .book-spine-dragging {
+  cursor: grabbing;
 }
 
 /*

@@ -1,4 +1,5 @@
 import type { ReadingStatus, UserBook } from "@/types/book";
+import type { CustomItem } from "@/types/item";
 import type { CalendarEvent, CalendarEventType } from "@/types/calendar";
 
 const STATUS_EVENT_TYPE: Partial<Record<ReadingStatus, CalendarEventType>> = {
@@ -57,12 +58,57 @@ export function userBooksToCalendarEvents(userBooks: UserBook[]): CalendarEvent[
 }
 
 /**
- * Combines manually-created collection_events with book-derived events.
- * A book's derived events are only shown when that book has no manual
- * events yet, so a user adding a manual event for a book replaces the
- * auto-generated placeholders for it rather than duplicating them.
+ * Custom items have no dedicated event timestamps either — derives
+ * "added_to_collection" from created_at, plus "warranty_expiry" when set,
+ * mirroring the book-derived approach above so the calendar stays a
+ * generic timeline across every collection type.
  */
-export function mergeCalendarEvents(userBooks: UserBook[], manualEvents: CalendarEvent[]): CalendarEvent[] {
+export function customItemsToCalendarEvents(items: CustomItem[]): CalendarEvent[] {
+  const events: CalendarEvent[] = [];
+
+  for (const item of items) {
+    events.push({
+      id: `${item.id}-added_to_collection`,
+      item_type: "custom_item",
+      item_id: item.id,
+      event_type: "added_to_collection",
+      title: item.name,
+      event_date: item.created_at,
+      cover_url: item.image_url ?? undefined,
+      metadata: { category: item.category },
+      source: "custom_item",
+    });
+
+    if (item.warranty_expiry) {
+      events.push({
+        id: `${item.id}-warranty_expiry`,
+        item_type: "custom_item",
+        item_id: item.id,
+        event_type: "warranty_expiry",
+        title: item.name,
+        description: `Warranty for ${item.name} expires`,
+        event_date: item.warranty_expiry,
+        cover_url: item.image_url ?? undefined,
+        metadata: { category: item.category },
+        source: "custom_item",
+      });
+    }
+  }
+
+  return events;
+}
+
+/**
+ * Combines manually-created collection_events with book- and item-derived
+ * events. A book's derived events are only shown when that book has no
+ * manual events yet, so a user adding a manual event for a book replaces
+ * the auto-generated placeholders for it rather than duplicating them.
+ */
+export function mergeCalendarEvents(
+  userBooks: UserBook[],
+  manualEvents: CalendarEvent[],
+  customItems: CustomItem[] = []
+): CalendarEvent[] {
   const userBookIdsWithManualEvents = new Set(
     manualEvents.map((event) => event.user_book_id).filter((id): id is string => !!id)
   );
@@ -70,6 +116,7 @@ export function mergeCalendarEvents(userBooks: UserBook[], manualEvents: Calenda
   const derivedEvents = userBooksToCalendarEvents(
     userBooks.filter((ub) => !userBookIdsWithManualEvents.has(ub.id))
   );
+  const itemEvents = customItemsToCalendarEvents(customItems);
 
-  return [...derivedEvents, ...manualEvents];
+  return [...derivedEvents, ...itemEvents, ...manualEvents];
 }

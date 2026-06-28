@@ -2,13 +2,16 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { Lock, LockOpen } from "lucide-react";
 import { createSupabaseBrowserClient } from "@/lib/supabaseClient";
 import { useShelves } from "@/hooks/useShelves";
 import { useBooks } from "@/hooks/useBooks";
 import { useLibrarySearch } from "@/hooks/useLibrarySearch";
+import { useBookshelfEditMode } from "@/hooks/useBookshelfEditMode";
 import { CreateShelfDialog } from "@/components/shelves/CreateShelfDialog";
 import { EditShelfDialog } from "@/components/shelves/EditShelfDialog";
 import { LibrarySearchBar } from "@/components/books/LibrarySearchBar";
+import { Button } from "@/components/ui/button";
 import { getSearchHighlightClass } from "@/lib/searchHighlightClasses";
 import { cn } from "@/lib/utils";
 import { SHELF_THEME_STYLES } from "@/lib/constants";
@@ -16,6 +19,7 @@ import { SHELF_THEME_STYLES } from "@/lib/constants";
 export default function BookshelvesPage() {
   const supabase = createSupabaseBrowserClient();
   const [userId, setUserId] = useState<string | undefined>();
+  const { isEditMode, toggleEditMode } = useBookshelfEditMode();
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setUserId(data.user?.id));
@@ -32,7 +36,21 @@ export default function BookshelvesPage() {
           <h1 className="text-2xl font-semibold text-zinc-50">Bookshelves</h1>
           <p className="text-sm text-zinc-400">{bookshelves.length} shelf{bookshelves.length === 1 ? "" : "ves"}</p>
         </div>
-        <CreateShelfDialog onCreate={createShelf} />
+        <div className="flex gap-2">
+          <Button
+            variant={isEditMode ? "secondary" : "outline"}
+            onClick={toggleEditMode}
+            title={
+              isEditMode
+                ? "Edit Mode — shelves can be renamed or deleted"
+                : "Browse Mode — shelf management is locked"
+            }
+          >
+            {isEditMode ? <LockOpen className="mr-1.5 h-4 w-4" /> : <Lock className="mr-1.5 h-4 w-4" />}
+            {isEditMode ? "Edit Mode" : "Browse Mode"}
+          </Button>
+          <CreateShelfDialog onCreate={createShelf} />
+        </div>
       </div>
 
       <div className="sticky top-0 z-10 bg-zinc-950 pb-3 pt-1">
@@ -85,7 +103,12 @@ export default function BookshelvesPage() {
                       {shelf.rows.length} row{shelf.rows.length === 1 ? "" : "s"} · {bookCount} book{bookCount === 1 ? "" : "s"}
                     </p>
                   </Link>
-                  <div className="absolute right-2 top-2 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100">
+                  <div
+                    className={cn(
+                      "absolute right-2 top-2 transition-opacity",
+                      isEditMode ? "opacity-100" : "pointer-events-none opacity-0"
+                    )}
+                  >
                     <EditShelfDialog
                       bookshelf={shelf}
                       onUpdate={(updates) => updateShelf(shelf.id, updates)}

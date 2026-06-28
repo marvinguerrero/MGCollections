@@ -33,6 +33,28 @@ export const SHELF_THEME_STYLES: Record<ShelfTheme, { shelf: string; frame: stri
 export const DEFAULT_PURCHASE_CURRENCY = "PHP";
 export const DEFAULT_BOOK_CONDITION = "Good";
 
+/**
+ * Suggested starting points only — users can type any custom category and
+ * it's saved as free text (see lib/categories.ts for how custom values
+ * become reusable suggestions, too).
+ */
+export const DEFAULT_CATEGORIES = [
+  "Books",
+  "Electronics",
+  "Appliances",
+  "Shoes",
+  "Watches",
+  "Bags",
+  "Furniture",
+  "Tools",
+  "Documents",
+  "Collectibles",
+  "Other",
+  "Uncategorized",
+];
+
+export const UNCATEGORIZED = "Uncategorized";
+
 export const DEFAULT_SHELF_WIDTH_CM = 90;
 export const DEFAULT_SHELF_HEIGHT_CM = 180;
 export const DEFAULT_ROW_HEIGHT_CM = 30;

@@ -28,7 +28,7 @@ import {
   type NormalizedBookResult,
   type ReadingStatus,
 } from "@/types/book";
-import { DEFAULT_BOOK_CONDITION, DEFAULT_PURCHASE_CURRENCY, READING_STATUSES } from "@/lib/constants";
+import { DEFAULT_BOOK_CONDITION, DEFAULT_PURCHASE_CURRENCY, READING_STATUSES, UNCATEGORIZED } from "@/lib/constants";
 import { findFirstEmptyIndex } from "@/lib/shelves/positionUtils";
 import type { BookshelfWithRows } from "@/types/shelf";
 import { Plus, BookOpen } from "lucide-react";
@@ -38,18 +38,29 @@ export function AddBookDialog({
   bookshelves,
   onAdded,
   trigger,
+  categorySuggestions = [],
+  open: controlledOpen,
+  onOpenChange: setControlledOpen,
 }: {
   bookshelves: BookshelfWithRows[];
   onAdded: () => void;
   trigger?: React.ReactElement;
+  categorySuggestions?: string[];
+  /** Default mode renders its own trigger button. Pass `open`/`onOpenChange` instead to drive it externally (e.g. from AddItemDialog's type-selector step). */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }) {
-  const [open, setOpen] = useState(false);
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
+  const isControlled = controlledOpen !== undefined;
+  const open = isControlled ? controlledOpen : uncontrolledOpen;
+  const setOpen = isControlled ? setControlledOpen! : setUncontrolledOpen;
   const [selected, setSelected] = useState<NormalizedBookResult | null>(null);
   const [status, setStatus] = useState<ReadingStatus>("owned_unread");
   const [shelfRowKey, setShelfRowKey] = useState<string>("");
   const [saving, setSaving] = useState(false);
 
   const [genre, setGenre] = useState("");
+  const [category, setCategory] = useState("");
   const [condition, setCondition] = useState<BookCondition>(DEFAULT_BOOK_CONDITION);
   const [purchasePrice, setPurchasePrice] = useState("");
   const [purchaseCurrency, setPurchaseCurrency] = useState(DEFAULT_PURCHASE_CURRENCY);
@@ -63,6 +74,7 @@ export function AddBookDialog({
     setStatus("owned_unread");
     setShelfRowKey("");
     setGenre("");
+    setCategory("");
     setCondition(DEFAULT_BOOK_CONDITION);
     setPurchasePrice("");
     setPurchaseCurrency(DEFAULT_PURCHASE_CURRENCY);
@@ -104,6 +116,7 @@ export function AddBookDialog({
           shelfRowId,
           positionIndex,
           genre: genre || undefined,
+          category: category || UNCATEGORIZED,
           condition,
           purchasePrice: purchasePrice || undefined,
           purchaseCurrency: purchaseCurrency || undefined,
@@ -134,15 +147,17 @@ export function AddBookDialog({
         if (!next) reset();
       }}
     >
-      <DialogTrigger
-        render={
-          trigger ?? (
-            <Button>
-              <Plus className="mr-2 h-4 w-4" /> Add Book
-            </Button>
-          )
-        }
-      />
+      {!isControlled && (
+        <DialogTrigger
+          render={
+            trigger ?? (
+              <Button>
+                <Plus className="mr-2 h-4 w-4" /> Add Book
+              </Button>
+            )
+          }
+        />
+      )}
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -243,6 +258,22 @@ export function AddBookDialog({
                     </SelectContent>
                   </Select>
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="add-book-category">Category</Label>
+                <Input
+                  id="add-book-category"
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value)}
+                  list="add-book-category-options"
+                  placeholder={UNCATEGORIZED}
+                />
+                <datalist id="add-book-category-options">
+                  {categorySuggestions.map((c) => (
+                    <option key={c} value={c} />
+                  ))}
+                </datalist>
               </div>
 
               <div className="grid grid-cols-[1fr_auto] gap-3">

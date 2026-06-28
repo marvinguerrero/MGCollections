@@ -82,6 +82,7 @@ function matchesLibraryQuery(query: string, userBook: UserBook, shelfLabel: stri
     userBook.status,
     userBook.genre,
     userBook.condition,
+    userBook.category,
     shelfLabel,
   ];
   return haystacks.some((value) => value?.toLowerCase().includes(query));

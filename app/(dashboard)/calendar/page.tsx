@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { createSupabaseBrowserClient } from "@/lib/supabaseClient";
 import { useBooks } from "@/hooks/useBooks";
+import { useCustomItems } from "@/hooks/useCustomItems";
 import { useCalendarEvents } from "@/hooks/useCalendarEvents";
 import { mergeCalendarEvents } from "@/lib/calendarEvents";
 import { CalendarHeader } from "@/components/calendar/CalendarHeader";
@@ -33,11 +34,15 @@ export default function CalendarPage() {
   }, [supabase]);
 
   const { userBooks, loading: booksLoading } = useBooks(userId);
+  const { items: customItems, loading: itemsLoading } = useCustomItems(userId);
   const { events: manualEvents, loading: eventsLoading, addEvent, updateEvent, deleteEvent } =
     useCalendarEvents(userId);
 
-  const allEvents = useMemo(() => mergeCalendarEvents(userBooks, manualEvents), [userBooks, manualEvents]);
-  const loading = booksLoading || eventsLoading;
+  const allEvents = useMemo(
+    () => mergeCalendarEvents(userBooks, manualEvents, customItems),
+    [userBooks, manualEvents, customItems]
+  );
+  const loading = booksLoading || eventsLoading || itemsLoading;
 
   const year = viewDate.getFullYear();
   const month = viewDate.getMonth();

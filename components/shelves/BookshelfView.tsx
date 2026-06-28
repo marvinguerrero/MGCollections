@@ -17,16 +17,21 @@ export function BookshelfView({
   onMoveBook,
   onBookClick,
   readOnly = false,
+  isEditMode = false,
   matchedUserBookIds = null,
 }: {
   bookshelf: BookshelfWithRows;
   onMoveBook?: (target: DragBookMoveTarget) => void | Promise<void>;
   onBookClick?: (userBook: UserBook) => void;
+  /** Public/visitor view — always locked, regardless of isEditMode. */
   readOnly?: boolean;
+  /** Owner's Browse/Edit toggle. Ignored when readOnly. Default: Browse (locked). */
+  isEditMode?: boolean;
   /** Set of user_book ids matching the active search; null means no search is active. */
   matchedUserBookIds?: Set<string> | null;
 }) {
   const [view, setView] = useState<"spine" | "cover">("spine");
+  const editModeActive = !readOnly && isEditMode;
   const { sensors, activeId, handleDragStart, handleDragEnd, handleDragCancel } = useDragBooks({
     onMove: (target) => onMoveBook?.(target),
   });
@@ -38,7 +43,7 @@ export function BookshelfView({
     : null;
 
   const content = (
-    <div className="w-full max-w-full space-y-2">
+    <div className={cn("w-full max-w-full space-y-2", editModeActive && "bookshelf-edit-mode")}>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
           <h2 className="truncate text-lg font-semibold text-zinc-100">{bookshelf.name}</h2>
@@ -65,7 +70,10 @@ export function BookshelfView({
       </div>
 
       <div
-        className={cn("shelf-frame w-full max-w-full overflow-hidden rounded-lg border-[6px] p-2 sm:border-[10px] sm:p-3")}
+        className={cn(
+          "shelf-frame w-full max-w-full overflow-hidden rounded-lg border-[6px] p-2 transition-shadow sm:border-[10px] sm:p-3",
+          editModeActive && "shelf-frame-edit-mode"
+        )}
         style={{ borderColor: theme.frame, backgroundColor: theme.shelf }}
       >
         <div className="flex flex-col gap-3">
@@ -75,7 +83,7 @@ export function BookshelfView({
               row={row}
               bookshelfId={bookshelf.id}
               view={view}
-              editMode={!readOnly}
+              editMode={editModeActive}
               matchedUserBookIds={matchedUserBookIds}
               onBookClick={onBookClick}
             />
@@ -90,7 +98,7 @@ export function BookshelfView({
     </div>
   );
 
-  if (readOnly) return content;
+  if (!editModeActive) return content;
 
   return (
     <DndContext

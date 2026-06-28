@@ -1,8 +1,34 @@
 import { DEFAULT_ROW_CAPACITY } from "@/lib/constants";
 import type { BookPosition, BookshelfWithRows, ShelfRowWithBooks } from "@/types/shelf";
-import type { UserBook } from "@/types/book";
+import type { BookLocation, UserBook } from "@/types/book";
 
 export type PositionWithBook = BookPosition & { user_book: UserBook };
+
+/**
+ * Builds the BookLocation a UserBook should show right after assignBookToShelf
+ * succeeds — looked up from the (pre-refetch) bookshelves snapshot, since the
+ * target shelf/row's own name/row_index don't change as a result of the move.
+ */
+export function buildLocation(
+  bookshelves: BookshelfWithRows[],
+  target: { bookshelfId: string; shelfRowId: string } | null,
+  positionIndex: number | null
+): BookLocation | null {
+  if (!target || positionIndex == null) return null;
+
+  const shelf = bookshelves.find((s) => s.id === target.bookshelfId);
+  const row = shelf?.rows.find((r) => r.id === target.shelfRowId);
+  if (!shelf || !row) return null;
+
+  return {
+    bookshelf_id: shelf.id,
+    bookshelf_name: shelf.name,
+    shelf_row_id: row.id,
+    shelf_row_name: row.name,
+    row_index: row.row_index,
+    position_index: positionIndex,
+  };
+}
 
 export type FilledShelfSlot = { index: number; position: PositionWithBook };
 export type EmptyShelfSlotData = { index: number; position: null };

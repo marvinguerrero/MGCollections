@@ -14,6 +14,7 @@ function FilledShelfSlot({
   index,
   position,
   view,
+  editMode,
   isSearchActive,
   isSearchMatch,
   onClick,
@@ -23,6 +24,7 @@ function FilledShelfSlot({
   index: number;
   position: PositionWithBook;
   view: "spine" | "cover";
+  editMode: boolean;
   isSearchActive: boolean;
   isSearchMatch: boolean;
   onClick?: () => void;
@@ -32,14 +34,16 @@ function FilledShelfSlot({
   const { setNodeRef, isOver } = useDroppable({
     id: `${bookshelfId}::${shelfRowId}::slot-${index}`,
     data: { positionIndex: index, occupantPositionId: position.id },
+    disabled: !editMode,
   });
 
   return (
-    <div ref={setNodeRef} className={cn(isOver && "shelf-slot-swap-target")}>
+    <div ref={setNodeRef} className={cn(editMode && isOver && "shelf-slot-swap-target")}>
       <DraggableBook
         positionId={position.id}
         userBook={position.user_book}
         view={view}
+        editMode={editMode}
         isSearchActive={isSearchActive}
         isSearchMatch={isSearchMatch}
         onClick={onClick}
@@ -79,6 +83,7 @@ export function ShelfRow({
               index={slot.index}
               position={slot.position}
               view={view}
+              editMode={editMode}
               isSearchActive={isSearchActive}
               isSearchMatch={isSearchActive && (matchedUserBookIds?.has(slot.position.user_book_id) ?? false)}
               onClick={() => onBookClick?.(slot.position.user_book)}

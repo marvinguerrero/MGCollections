@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabaseServer";
+import { UNCATEGORIZED } from "@/lib/constants";
 import { BOOK_CONDITIONS } from "@/types/book";
 import type { BookCondition, NormalizedBookResult, ReadingStatus } from "@/types/book";
 
@@ -7,6 +8,7 @@ interface InventoryFields {
   condition?: BookCondition | null;
   notes?: string | null;
   genre?: string | null;
+  category?: string | null;
   purchasePrice?: number | string | null;
   purchaseCurrency?: string | null;
   dateBought?: string | null;
@@ -24,7 +26,7 @@ interface AddBookBody extends InventoryFields {
 
 /** Blank optional fields must save as null, not empty strings/NaN. */
 function normalizeInventoryFields(body: AddBookBody) {
-  const { condition, notes, genre, purchasePrice, purchaseCurrency, dateBought, purchaseLocation } = body;
+  const { condition, notes, genre, category, purchasePrice, purchaseCurrency, dateBought, purchaseLocation } = body;
 
   if (condition && !BOOK_CONDITIONS.includes(condition)) {
     return { error: `Invalid condition: ${condition}` } as const;
@@ -47,6 +49,7 @@ function normalizeInventoryFields(body: AddBookBody) {
       condition: condition || null,
       notes: notes?.trim() || null,
       genre: genre?.trim() || null,
+      category: category?.trim() || UNCATEGORIZED,
       purchase_price: price,
       purchase_currency: purchaseCurrency?.trim() || null,
       date_bought: dateBought || null,

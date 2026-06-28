@@ -13,11 +13,11 @@ export type CalendarEventType =
   | "custom";
 
 /**
- * "user_book" events are derived on the fly from user_books and have no
- * row in collection_events, so they can't be edited or deleted.
- * "collection_event" events are real rows owned by the user.
+ * "user_book"/"custom_item" events are derived on the fly from their source
+ * table and have no row in collection_events, so they can't be edited or
+ * deleted. "collection_event" events are real rows owned by the user.
  */
-export type CalendarEventSource = "user_book" | "collection_event";
+export type CalendarEventSource = "user_book" | "custom_item" | "collection_event";
 
 export interface CalendarEvent {
   id: string;
@@ -57,6 +57,11 @@ export const EDITABLE_CALENDAR_EVENT_TYPES: CalendarEventType[] = [
   "read",
   "finished_reading",
   "lent",
+  "borrowed",
   "returned",
+  "purchased",
+  "maintenance",
+  "warranty_expiry",
+  "service",
   "custom",
 ];

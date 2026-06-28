@@ -23,7 +23,7 @@ import { Button } from "@/components/ui/button";
 import { Pencil, Star } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { DEFAULT_PURCHASE_CURRENCY, READING_STATUSES } from "@/lib/constants";
+import { DEFAULT_PURCHASE_CURRENCY, READING_STATUSES, UNCATEGORIZED } from "@/lib/constants";
 import {
   BOOK_CONDITIONS,
   READING_STATUS_LABELS,
@@ -36,10 +36,12 @@ import {
 import type { BookshelfWithRows } from "@/types/shelf";
 
 const NO_SHELF_VALUE = "none";
+const NO_CONDITION_VALUE = "none";
 
 export function EditBookDialog({
   userBook,
   bookshelves = [],
+  categorySuggestions = [],
   onSave,
   onAssignShelf,
   trigger,
@@ -48,6 +50,7 @@ export function EditBookDialog({
 }: {
   userBook: UserBook;
   bookshelves?: BookshelfWithRows[];
+  categorySuggestions?: string[];
   onSave: (updates: UserBookEditableFields) => Promise<{ error: unknown }>;
   onAssignShelf?: (target: { bookshelfId: string; shelfRowId: string } | null) => Promise<{ error: unknown }>;
   /** Default mode renders its own trigger button. Pass `open`/`onOpenChange` instead to drive it externally (e.g. from a dropdown menu item, where a Dialog can't be nested inside a Menu.Item). */
@@ -63,6 +66,7 @@ export function EditBookDialog({
 
   const [status, setStatus] = useState<ReadingStatus>(userBook.status);
   const [genre, setGenre] = useState("");
+  const [category, setCategory] = useState("");
   const [condition, setCondition] = useState<BookCondition | "">("");
   const [purchasePrice, setPurchasePrice] = useState("");
   const [purchaseCurrency, setPurchaseCurrency] = useState(DEFAULT_PURCHASE_CURRENCY);
@@ -83,6 +87,7 @@ export function EditBookDialog({
     if (!open) return;
     setStatus(userBook.status);
     setGenre(userBook.genre ?? "");
+    setCategory(userBook.category ?? "");
     setCondition(userBook.condition ?? "");
     setPurchasePrice(userBook.purchase_price != null ? String(userBook.purchase_price) : "");
     setPurchaseCurrency(userBook.purchase_currency ?? DEFAULT_PURCHASE_CURRENCY);
@@ -113,6 +118,7 @@ export function EditBookDialog({
     const { error } = await onSave({
       status,
       genre: genre.trim() || null,
+      category: category.trim() || UNCATEGORIZED,
       condition: condition || null,
       purchase_price: purchasePrice ? Number(purchasePrice) : null,
       purchase_currency: purchaseCurrency.trim() || null,
@@ -198,6 +204,22 @@ export function EditBookDialog({
                 </Select>
               </div>
             </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit-book-category">Category</Label>
+              <Input
+                id="edit-book-category"
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                list="edit-book-category-options"
+                placeholder={UNCATEGORIZED}
+              />
+              <datalist id="edit-book-category-options">
+                {categorySuggestions.map((c) => (
+                  <option key={c} value={c} />
+                ))}
+              </datalist>
+            </div>
           </div>
 
           <div className="space-y-3 border-t border-zinc-800 pt-4">
@@ -253,11 +275,15 @@ export function EditBookDialog({
 
           <div className="space-y-2 border-t border-zinc-800 pt-4">
             <p className="text-xs font-medium text-zinc-500">Condition</p>
-            <Select value={condition || undefined} onValueChange={(v) => setCondition((v as BookCondition) ?? "")}>
+            <Select
+              value={condition || NO_CONDITION_VALUE}
+              onValueChange={(v) => setCondition(v === NO_CONDITION_VALUE ? "" : (v as BookCondition))}
+            >
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="Not set" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value={NO_CONDITION_VALUE}>Not set</SelectItem>
                 {BOOK_CONDITIONS.map((c) => (
                   <SelectItem key={c} value={c}>
                     {c}

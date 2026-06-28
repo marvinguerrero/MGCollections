@@ -27,6 +27,7 @@ export function EmptyShelfSlot({
   const { setNodeRef, isOver } = useDroppable({
     id: `${bookshelfId}::${shelfRowId}::slot-${index}`,
     data: { positionIndex: index },
+    disabled: !editMode,
   });
 
   return (

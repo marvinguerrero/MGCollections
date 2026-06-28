@@ -40,7 +40,7 @@ export function BottomNav({ profile }: { profile: Profile | null }) {
             className="flex flex-1 flex-col items-center justify-center gap-0.5 text-[11px] text-zinc-500"
           >
             <Menu className="h-5 w-5" />
-            Menu
+            More
           </button>
         }
       />

@@ -50,13 +50,32 @@ export function useShelves(userId: string | undefined) {
           .order("position_index", { ascending: true })
       : { data: [] };
 
+    // Each position already tells us its own shelf/row/index — attach that
+    // to the nested user_book as `location` so BookDetailsPanel can show it
+    // without a second query, and so it's never out of sync with what's
+    // actually rendered on this exact shelf.
     const result: BookshelfWithRows[] = shelves.map((shelf) => ({
       ...shelf,
       rows: (rows ?? [])
         .filter((row) => row.bookshelf_id === shelf.id)
         .map((row) => ({
           ...row,
-          positions: (positions ?? []).filter((p) => p.shelf_row_id === row.id),
+          positions: (positions ?? [])
+            .filter((p) => p.shelf_row_id === row.id)
+            .map((p) => ({
+              ...p,
+              user_book: {
+                ...p.user_book,
+                location: {
+                  bookshelf_id: shelf.id,
+                  bookshelf_name: shelf.name,
+                  shelf_row_id: row.id,
+                  shelf_row_name: row.name,
+                  row_index: row.row_index,
+                  position_index: p.position_index,
+                },
+              },
+            })),
         })),
     }));
 
@@ -188,16 +207,16 @@ export function useShelves(userId: string | undefined) {
       .find((p) => p.user_book_id === userBookId);
 
     if (!target) {
-      if (!currentPosition) return { error: null };
+      if (!currentPosition) return { error: null, positionIndex: null };
       const { error } = await supabase.from("book_positions").delete().eq("id", currentPosition.id);
       if (!error) await fetchShelves();
-      return { error };
+      return { error, positionIndex: null };
     }
 
     const targetRow = bookshelves
       .find((s) => s.id === target.bookshelfId)
       ?.rows.find((r) => r.id === target.shelfRowId);
-    if (!targetRow) return { error: new Error("Shelf row not found") };
+    if (!targetRow) return { error: new Error("Shelf row not found"), positionIndex: null };
 
     const positionIndex = findFirstEmptyIndex(
       currentPosition?.shelf_row_id === target.shelfRowId
@@ -211,7 +230,7 @@ export function useShelves(userId: string | undefined) {
         .update({ bookshelf_id: target.bookshelfId, shelf_row_id: target.shelfRowId, position_index: positionIndex })
         .eq("id", currentPosition.id);
       if (!error) await fetchShelves();
-      return { error };
+      return { error, positionIndex };
     }
 
     const { error } = await supabase.from("book_positions").insert({
@@ -221,7 +240,7 @@ export function useShelves(userId: string | undefined) {
       position_index: positionIndex,
     });
     if (!error) await fetchShelves();
-    return { error };
+    return { error, positionIndex };
   }
 
   return {

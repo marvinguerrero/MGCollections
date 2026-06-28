@@ -9,6 +9,7 @@ export function DraggableBook({
   positionId,
   userBook,
   view,
+  editMode = false,
   isSearchActive = false,
   isSearchMatch = false,
   onClick,
@@ -16,12 +17,15 @@ export function DraggableBook({
   positionId: string;
   userBook: UserBook;
   view: "spine" | "cover";
+  /** Browse Mode (default): drag listeners aren't attached at all, so this is just a click target. */
+  editMode?: boolean;
   isSearchActive?: boolean;
   isSearchMatch?: boolean;
   onClick?: () => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: positionId,
+    disabled: !editMode,
   });
 
   const style = transform
@@ -29,7 +33,13 @@ export function DraggableBook({
     : undefined;
 
   return (
-    <div ref={setNodeRef} style={style} {...listeners} {...attributes} className="touch-none">
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...(editMode ? listeners : undefined)}
+      {...(editMode ? attributes : undefined)}
+      className="touch-none"
+    >
       <BookSpine
         userBook={userBook}
         view={view}

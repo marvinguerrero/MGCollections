@@ -3,11 +3,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Settings2 } from "lucide-react";
+import { ArrowLeft, Lock, LockOpen } from "lucide-react";
 import { createSupabaseBrowserClient } from "@/lib/supabaseClient";
 import { useShelves } from "@/hooks/useShelves";
 import { useBooks } from "@/hooks/useBooks";
 import { useLibrarySearch } from "@/hooks/useLibrarySearch";
+import { useBookshelfEditMode } from "@/hooks/useBookshelfEditMode";
+import { buildLocation } from "@/lib/shelves/positionUtils";
+import { getCategorySuggestions } from "@/lib/categories";
 import { BookshelfView } from "@/components/shelves/BookshelfView";
 import { ShelfBuilder } from "@/components/shelves/ShelfBuilder";
 import { LibrarySearchBar } from "@/components/books/LibrarySearchBar";
@@ -20,7 +23,7 @@ export default function BookshelfDetailPage() {
   const params = useParams<{ id: string }>();
   const supabase = createSupabaseBrowserClient();
   const [userId, setUserId] = useState<string | undefined>();
-  const [editing, setEditing] = useState(false);
+  const { isEditMode, toggleEditMode } = useBookshelfEditMode();
   const [selected, setSelected] = useState<UserBook | null>(null);
 
   useEffect(() => {
@@ -38,7 +41,8 @@ export default function BookshelfDetailPage() {
     removeBookFromShelves,
     assignBookToShelf,
   } = useShelves(userId);
-  const { updateStatus, updateLendable, updatePersonalDetails, patchLocal, removeBook } = useBooks(userId);
+  const { userBooks, updateStatus, updateLendable, updatePersonalDetails, patchLocal, removeBook } =
+    useBooks(userId);
 
   const bookshelf = bookshelves.find((s) => s.id === params.id);
 
@@ -48,6 +52,10 @@ export default function BookshelfDetailPage() {
     [bookshelf]
   );
   const search = useLibrarySearch(shelfUserBooks, bookshelf ? [bookshelf] : []);
+  const categorySuggestions = useMemo(
+    () => getCategorySuggestions(userBooks.map((ub) => ub.category)),
+    [userBooks]
+  );
 
   if (loading) {
     return <p className="text-sm text-zinc-500">Loading bookshelf...</p>;
@@ -64,13 +72,19 @@ export default function BookshelfDetailPage() {
           <ArrowLeft className="h-4 w-4" /> All bookshelves
         </Link>
         <div className="flex gap-2">
-          <AddBookDialog bookshelves={bookshelves} onAdded={refetch} />
+          <AddBookDialog bookshelves={bookshelves} onAdded={refetch} categorySuggestions={categorySuggestions} />
           <Button
             className="h-10"
-            variant={editing ? "secondary" : "outline"}
-            onClick={() => setEditing((e) => !e)}
+            variant={isEditMode ? "secondary" : "outline"}
+            onClick={toggleEditMode}
+            title={
+              isEditMode
+                ? "Edit Mode — books can be dragged and shelves can be resized"
+                : "Browse Mode — books are locked in place"
+            }
           >
-            <Settings2 className="mr-1.5 h-4 w-4" /> {editing ? "Done editing" : "Edit shelf"}
+            {isEditMode ? <LockOpen className="mr-1.5 h-4 w-4" /> : <Lock className="mr-1.5 h-4 w-4" />}
+            {isEditMode ? "Edit Mode" : "Browse Mode"}
           </Button>
         </div>
       </div>
@@ -92,6 +106,7 @@ export default function BookshelfDetailPage() {
       <div className="grid gap-6 lg:grid-cols-[1fr_280px]">
         <BookshelfView
           bookshelf={bookshelf}
+          isEditMode={isEditMode}
           onMoveBook={async (target) => {
             const { error } = await moveBookPosition(target.positionId, {
               shelfRowId: target.shelfRowId,
@@ -105,7 +120,7 @@ export default function BookshelfDetailPage() {
           matchedUserBookIds={search.matchedUserBookIds}
         />
 
-        {editing && (
+        {isEditMode && (
           <ShelfBuilder
             bookshelf={bookshelf}
             onUpdateDims={(updates) => updateShelf(bookshelf.id, updates)}
@@ -120,15 +135,22 @@ export default function BookshelfDetailPage() {
         open={!!selected}
         onOpenChange={(open) => !open && setSelected(null)}
         bookshelves={bookshelves}
+        categorySuggestions={categorySuggestions}
         onSaveDetails={async (updates) => {
           if (!selected) return { error: null };
           const result = await updatePersonalDetails(selected.id, updates);
           if (!result.error) setSelected((prev) => prev && { ...prev, ...updates });
           return result;
         }}
-        onAssignShelf={(target) => {
-          if (!selected) return Promise.resolve({ error: null });
-          return assignBookToShelf(selected.id, target);
+        onAssignShelf={async (target) => {
+          if (!selected) return { error: null };
+          const result = await assignBookToShelf(selected.id, target);
+          if (!result.error) {
+            const location = buildLocation(bookshelves, target, result.positionIndex);
+            patchLocal(selected.id, { location });
+            setSelected((prev) => prev && { ...prev, location });
+          }
+          return result;
         }}
         onStatusChange={async (status) => {
           if (!selected) return;

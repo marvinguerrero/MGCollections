@@ -19,7 +19,7 @@ import type { Profile } from "@/types/user";
 
 /**
  * Single shared drawer used by both the header hamburger button and the
- * bottom nav's "Menu" tab. Each call site renders its own <Sheet> instance
+ * bottom nav's "More" tab. Each call site renders its own <Sheet> instance
  * with the same content, so there's no need to share open-state across
  * components that live in different parts of the layout tree.
  */

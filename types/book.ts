@@ -48,6 +48,16 @@ export interface NormalizedBookResult {
   genres: string[];
 }
 
+/** Where a physical copy sits, derived from book_positions → bookshelves/shelf_rows. */
+export interface BookLocation {
+  bookshelf_id: string;
+  bookshelf_name: string;
+  shelf_row_id: string;
+  shelf_row_name: string | null;
+  row_index: number;
+  position_index: number;
+}
+
 export interface UserBook {
   id: string;
   user_id: string;
@@ -65,18 +75,23 @@ export interface UserBook {
   date_bought: string | null;
   purchase_location: string | null;
   genre: string | null;
+  /** Free text, always set — falls back to "Uncategorized" rather than null. Independent of item_type. */
+  category: string;
   rating: number | null;
   favorite: boolean;
   tags: string[];
   // Reading progress — updated whenever a reading session is saved.
   current_page: number;
   last_read_at: string | null;
+  /** null when the book has no shelf assignment yet. */
+  location: BookLocation | null;
 }
 
 /** Fields an owner can change via EditBookDialog — everything except identity/global book data. */
 export type UserBookEditableFields = Partial<{
   status: ReadingStatus;
   genre: string | null;
+  category: string;
   condition: BookCondition | null;
   notes: string | null;
   purchase_price: number | null;

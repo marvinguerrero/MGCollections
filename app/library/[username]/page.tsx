@@ -19,10 +19,13 @@ export default async function PublicLibraryPage({ params }: { params: Promise<{ 
     notFound();
   }
 
+  // RLS already enforces visibility, but filtering explicitly here too means
+  // this page's behavior doesn't silently depend on RLS alone.
   const { data: shelves } = await supabase
     .from("bookshelves")
     .select("*")
     .eq("user_id", profile.id)
+    .eq("visibility", "public")
     .order("sort_order", { ascending: true });
 
   const shelfIds = (shelves ?? []).map((s) => s.id);
@@ -33,6 +36,9 @@ export default async function PublicLibraryPage({ params }: { params: Promise<{ 
 
   const rowIds = (rows ?? []).map((r) => r.id);
 
+  // Book-level visibility (private override / inherit_from_shelf) is
+  // enforced by the book_positions RLS policy — a private book's
+  // user_books row won't even resolve through that embed.
   const { data: positions } = rowIds.length
     ? await supabase
         .from("book_positions")

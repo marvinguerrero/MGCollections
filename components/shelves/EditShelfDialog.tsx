@@ -20,7 +20,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Pencil } from "lucide-react";
-import { SHELF_THEMES, type Bookshelf, type ShelfTheme } from "@/types/shelf";
+import { SHELF_THEMES, SHELF_VISIBILITIES, type Bookshelf, type ShelfTheme, type ShelfVisibility } from "@/types/shelf";
+import { SHELF_VISIBILITY_LABELS } from "@/lib/constants";
 import { toast } from "sonner";
 
 function errorMessage(error: unknown, fallback: string): string {
@@ -36,18 +37,28 @@ export function EditShelfDialog({
   onDelete,
 }: {
   bookshelf: Bookshelf;
-  onUpdate: (updates: Partial<Pick<Bookshelf, "name" | "description" | "theme">>) => Promise<{ error: unknown } | void>;
+  onUpdate: (
+    updates: Partial<Pick<Bookshelf, "name" | "description" | "theme" | "visibility">>
+  ) => Promise<{ error: unknown } | void>;
   onDelete: () => Promise<{ error: unknown } | void>;
 }) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState(bookshelf.name);
   const [description, setDescription] = useState(bookshelf.description ?? "");
   const [theme, setTheme] = useState<ShelfTheme>((bookshelf.theme as ShelfTheme) ?? "walnut");
+  const [visibility, setVisibility] = useState<ShelfVisibility>(bookshelf.visibility ?? "private");
   const [saving, setSaving] = useState(false);
+
+  function handleVisibilityChange(next: ShelfVisibility) {
+    if (next === "public" && visibility !== "public") {
+      toast.warning("Books in this shelf will be visible publicly unless individually marked private.");
+    }
+    setVisibility(next);
+  }
 
   async function handleSave() {
     setSaving(true);
-    const result = await onUpdate({ name, description, theme });
+    const result = await onUpdate({ name, description, theme, visibility });
     setSaving(false);
     if (result && "error" in result && result.error) {
       console.error("Failed to update bookshelf", result.error);
@@ -106,6 +117,26 @@ export function EditShelfDialog({
                 ))}
               </SelectContent>
             </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label>Visibility</Label>
+            <Select value={visibility} onValueChange={(v) => handleVisibilityChange(v as ShelfVisibility)}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {SHELF_VISIBILITIES.map((v) => (
+                  <SelectItem key={v} value={v}>
+                    {SHELF_VISIBILITY_LABELS[v]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {visibility === "public" && (
+              <p className="text-xs text-amber-400">
+                Books in this shelf will be visible publicly unless individually marked private.
+              </p>
+            )}
           </div>
           <div className="flex gap-2">
             <Button className="flex-1" onClick={handleSave} disabled={saving}>

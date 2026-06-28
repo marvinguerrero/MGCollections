@@ -98,7 +98,21 @@ export default function BookshelvesPage() {
                         <div key={i} className="h-full flex-1 rounded-sm bg-black/20" />
                       ))}
                     </div>
-                    <h3 className="font-medium text-zinc-100">{shelf.name}</h3>
+                    <div className="flex items-center gap-1.5">
+                      <h3 className="font-medium text-zinc-100">{shelf.name}</h3>
+                      {shelf.visibility !== "private" && (
+                        <span
+                          className={cn(
+                            "rounded-full px-1.5 py-0.5 text-[10px] font-medium",
+                            shelf.visibility === "public"
+                              ? "bg-emerald-600 text-emerald-50"
+                              : "bg-zinc-700 text-zinc-200"
+                          )}
+                        >
+                          {shelf.visibility === "public" ? "Public" : "Unlisted"}
+                        </span>
+                      )}
+                    </div>
                     <p className="text-xs text-zinc-500">
                       {shelf.rows.length} row{shelf.rows.length === 1 ? "" : "s"} · {bookCount} book{bookCount === 1 ? "" : "s"}
                     </p>

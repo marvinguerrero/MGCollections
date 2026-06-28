@@ -3,6 +3,15 @@ import type { UserBook } from "./book";
 export const SHELF_THEMES = ["walnut", "oak", "ebony", "white"] as const;
 export type ShelfTheme = (typeof SHELF_THEMES)[number];
 
+/**
+ * private (default): never shown on the public library.
+ * public: shown, and books on it follow their own visibility (see UserBook).
+ * unlisted: hidden from public browsing for now — reserved for a future
+ * direct-link viewing feature, not built yet.
+ */
+export const SHELF_VISIBILITIES = ["private", "public", "unlisted"] as const;
+export type ShelfVisibility = (typeof SHELF_VISIBILITIES)[number];
+
 export interface Bookshelf {
   id: string;
   user_id: string;
@@ -12,6 +21,7 @@ export interface Bookshelf {
   height_cm: number;
   theme: ShelfTheme | string;
   sort_order: number;
+  visibility: ShelfVisibility;
   created_at: string;
 }
 

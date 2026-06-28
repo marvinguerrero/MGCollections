@@ -23,12 +23,14 @@ import { Button } from "@/components/ui/button";
 import { Pencil, Star } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { DEFAULT_PURCHASE_CURRENCY, READING_STATUSES, UNCATEGORIZED } from "@/lib/constants";
+import { BOOK_VISIBILITY_LABELS, DEFAULT_PURCHASE_CURRENCY, READING_STATUSES, UNCATEGORIZED } from "@/lib/constants";
 import {
   BOOK_CONDITIONS,
+  BOOK_VISIBILITIES,
   READING_STATUS_LABELS,
   RATING_VALUES,
   type BookCondition,
+  type BookVisibility,
   type ReadingStatus,
   type UserBook,
   type UserBookEditableFields,
@@ -76,6 +78,7 @@ export function EditBookDialog({
   const [rating, setRating] = useState<number | null>(null);
   const [favorite, setFavorite] = useState(false);
   const [tagsInput, setTagsInput] = useState("");
+  const [visibility, setVisibility] = useState<BookVisibility>("inherit_from_shelf");
   const [shelfRowKey, setShelfRowKey] = useState<string>(NO_SHELF_VALUE);
   const [priceError, setPriceError] = useState<string | null>(null);
 
@@ -97,6 +100,7 @@ export function EditBookDialog({
     setRating(userBook.rating ?? null);
     setFavorite(userBook.favorite);
     setTagsInput((userBook.tags ?? []).join(", "));
+    setVisibility(userBook.visibility ?? "inherit_from_shelf");
     setShelfRowKey(currentPosition ? `${currentPosition.shelf.id}::${currentPosition.row.id}` : NO_SHELF_VALUE);
     setPriceError(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -128,6 +132,7 @@ export function EditBookDialog({
       rating,
       favorite,
       tags,
+      visibility,
     });
 
     if (error) {
@@ -364,6 +369,23 @@ export function EditBookDialog({
                 </Select>
               </div>
             )}
+          </div>
+
+          <div className="space-y-2 border-t border-zinc-800 pt-4">
+            <p className="text-xs font-medium text-zinc-500">Sharing</p>
+            <Label>Visibility</Label>
+            <Select value={visibility} onValueChange={(v) => setVisibility(v as BookVisibility)}>
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {BOOK_VISIBILITIES.map((v) => (
+                  <SelectItem key={v} value={v}>
+                    {BOOK_VISIBILITY_LABELS[v]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="flex gap-2 pt-2">

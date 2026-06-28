@@ -119,7 +119,17 @@ export function useShelves(userId: string | undefined) {
     return { error: null, shelf };
   }
 
-  async function updateShelf(shelfId: string, updates: Partial<{ name: string; description: string | null; width_cm: number; height_cm: number; theme: string }>) {
+  async function updateShelf(
+    shelfId: string,
+    updates: Partial<{
+      name: string;
+      description: string | null;
+      width_cm: number;
+      height_cm: number;
+      theme: string;
+      visibility: string;
+    }>
+  ) {
     const { error } = await supabase.from("bookshelves").update(updates).eq("id", shelfId);
     if (!error) await fetchShelves();
     return { error };

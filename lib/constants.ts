@@ -1,5 +1,5 @@
-import type { ReadingStatus } from "@/types/book";
-import type { ShelfTheme } from "@/types/shelf";
+import type { BookVisibility, ReadingStatus } from "@/types/book";
+import type { ShelfTheme, ShelfVisibility } from "@/types/shelf";
 
 export const READING_STATUSES: ReadingStatus[] = [
   "owned_unread",
@@ -54,6 +54,18 @@ export const DEFAULT_CATEGORIES = [
 ];
 
 export const UNCATEGORIZED = "Uncategorized";
+
+export const SHELF_VISIBILITY_LABELS: Record<ShelfVisibility, string> = {
+  private: "Private",
+  public: "Public",
+  unlisted: "Unlisted",
+};
+
+export const BOOK_VISIBILITY_LABELS: Record<BookVisibility, string> = {
+  inherit_from_shelf: "Inherit from Shelf",
+  private: "Private",
+  public: "Public",
+};
 
 export const DEFAULT_SHELF_WIDTH_CM = 90;
 export const DEFAULT_SHELF_HEIGHT_CM = 180;

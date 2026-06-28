@@ -10,6 +10,14 @@ export type ReadingStatus =
 
 export type BookCondition = "New" | "Like New" | "Good" | "Fair" | "Poor" | "Damaged";
 
+/**
+ * inherit_from_shelf (default): visible publicly only if its shelf is public.
+ * private: hidden even on a public shelf.
+ * public: visible publicly even on a private shelf.
+ */
+export const BOOK_VISIBILITIES = ["inherit_from_shelf", "private", "public"] as const;
+export type BookVisibility = (typeof BOOK_VISIBILITIES)[number];
+
 export type BookSource = "google" | "openlibrary";
 
 export interface Book {
@@ -85,6 +93,7 @@ export interface UserBook {
   last_read_at: string | null;
   /** null when the book has no shelf assignment yet. */
   location: BookLocation | null;
+  visibility: BookVisibility;
 }
 
 /** Fields an owner can change via EditBookDialog — everything except identity/global book data. */
@@ -101,6 +110,7 @@ export type UserBookEditableFields = Partial<{
   rating: number | null;
   favorite: boolean;
   tags: string[];
+  visibility: BookVisibility;
 }>;
 
 export const READING_STATUS_LABELS: Record<ReadingStatus, string> = {

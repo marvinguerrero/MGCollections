@@ -106,6 +106,18 @@ create table if not exists bookshelves (
 
 create index if not exists idx_bookshelves_user_id on bookshelves (user_id);
 
+-- Shelf-level public sharing control. Private by default — only shelves
+-- explicitly marked 'public' are eligible for the public library; existing
+-- shelves backfill to 'private' via this default.
+alter table bookshelves add column if not exists visibility text not null default 'private';
+do $$
+begin
+  alter table bookshelves add constraint bookshelves_visibility_check
+    check (visibility in ('private', 'public', 'unlisted'));
+exception
+  when duplicate_object then null;
+end $$;
+
 -- =========================================
 -- shelf_rows
 -- =========================================
@@ -253,6 +265,17 @@ alter table user_books add column if not exists last_read_at timestamptz;
 -- not as a DB enum/table, so users can type any custom category.
 alter table user_books add column if not exists category text not null default 'Uncategorized';
 create index if not exists idx_user_books_category on user_books (category);
+
+-- Book-level visibility override. Defaults to inherit_from_shelf so a book's
+-- public/private state follows its shelf unless explicitly overridden.
+alter table user_books add column if not exists visibility text not null default 'inherit_from_shelf';
+do $$
+begin
+  alter table user_books add constraint user_books_visibility_check
+    check (visibility in ('inherit_from_shelf', 'private', 'public'));
+exception
+  when duplicate_object then null;
+end $$;
 
 -- =========================================
 -- custom_items
@@ -407,6 +430,27 @@ create trigger trg_on_borrow_request_created
   for each row execute function notify_owner_on_borrow_request();
 
 -- =========================================
+-- Used by the user_books public-visibility policy below. Must be
+-- SECURITY DEFINER (bypasses RLS internally) rather than an inline EXISTS
+-- subquery in that policy — book_positions' own policy queries user_books
+-- back, and an inline subquery here would form an RLS recursion cycle.
+-- =========================================
+create or replace function is_user_book_on_public_shelf(p_user_book_id uuid)
+returns boolean
+language sql
+security definer
+set search_path = public
+stable
+as $$
+  select exists (
+    select 1
+    from book_positions bp
+    join bookshelves b on b.id = bp.bookshelf_id
+    where bp.user_book_id = p_user_book_id and b.visibility = 'public'
+  );
+$$;
+
+-- =========================================
 -- Row Level Security
 -- =========================================
 alter table profiles enable row level security;
@@ -450,12 +494,21 @@ create policy "Users can view their own user_books"
   on user_books for select
   using (auth.uid() = user_id);
 
-create policy "Public can view lendable/public user_books via owner's public profile"
+-- Visible publicly only via an explicit book.visibility='public' override,
+-- or (inherit_from_shelf) when its shelf is itself public.
+create policy "Public can view user_books via shelf/book visibility"
   on user_books for select
   using (
     exists (
       select 1 from profiles p
       where p.id = user_books.user_id and p.is_public = true
+    )
+    and (
+      user_books.visibility = 'public'
+      or (
+        user_books.visibility = 'inherit_from_shelf'
+        and is_user_book_on_public_shelf(user_books.id)
+      )
     )
   );
 
@@ -476,10 +529,13 @@ create policy "Users can view their own bookshelves"
   on bookshelves for select
   using (auth.uid() = user_id);
 
+-- Only shelves explicitly marked public — 'private' (default) and
+-- 'unlisted' are excluded from public browsing.
 create policy "Public can view bookshelves of public profiles"
   on bookshelves for select
   using (
-    exists (
+    visibility = 'public'
+    and exists (
       select 1 from profiles p
       where p.id = bookshelves.user_id and p.is_public = true
     )
@@ -513,7 +569,7 @@ create policy "Public can view shelf_rows of public profiles"
     exists (
       select 1 from bookshelves b
       join profiles p on p.id = b.user_id
-      where b.id = shelf_rows.bookshelf_id and p.is_public = true
+      where b.id = shelf_rows.bookshelf_id and b.visibility = 'public' and p.is_public = true
     )
   );
 
@@ -560,7 +616,13 @@ create policy "Public can view book_positions of public profiles"
     exists (
       select 1 from user_books ub
       join profiles p on p.id = ub.user_id
-      where ub.id = book_positions.user_book_id and p.is_public = true
+      join bookshelves b on b.id = book_positions.bookshelf_id
+      where ub.id = book_positions.user_book_id
+        and p.is_public = true
+        and (
+          ub.visibility = 'public'
+          or (ub.visibility = 'inherit_from_shelf' and b.visibility = 'public')
+        )
     )
   );
 
